@@ -2,176 +2,20 @@ import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from '
 import { ShoppingCart, Server, Smartphone, LineChart, CheckCircle, X, ChevronRight, Zap, ArrowRight, Shield, BarChart3, Layers, Star, Users, TrendingUp, Package, Terminal, FileJson, Code, LogOut, CreditCard, Lock, Loader2, ChevronDown } from 'lucide-react';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
 
+import { Reveal, Particle, TiltCard, HandheldSVG, KioskSVG, InteractiveHeroModel, LogoLoop } from './components/Shared';
+import ProductsPage from './pages/ProductsPage';
+import ServicesPage from './pages/ServicesPage';
+import DocsPage from './pages/DocsPage';
+import ProfilePage from './pages/ProfilePage';
+import OrderHistoryPage from './pages/OrderHistoryPage';
+import SavedAddressesPage from './pages/SavedAddressesPage';
+
 // IMPORT AUTH FROM YOUR SECURE FIREBASE.JS FILE
 import { auth } from './firebase';
 
 // ==========================================
-// 1. HELPER COMPONENTS
+// 4. MAIN APP DATA & LOGIC
 // ==========================================
-const Reveal = ({ children, delay = 0, className = "" }) => {
-  const ref = useRef(null);
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        setIsVisible(true);
-        observer.unobserve(entry.target);
-      }
-    }, { threshold: 0.1, rootMargin: "0px 0px -50px 0px" });
-
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <div ref={ref} style={{ transitionDelay: `${delay}ms` }} className={`transition-all duration-1000 ease-out ${isVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-16 scale-95'} ${className}`}>
-      {children}
-    </div>
-  );
-};
-
-function Particle({ style }) {
-  return <div className="absolute rounded-full pointer-events-none" style={{ width: `${style.size}px`, height: `${style.size}px`, left: `${style.x}%`, top: `${style.y}%`, background: style.color, opacity: style.opacity, animation: `float ${style.duration}s ease-in-out infinite`, animationDelay: `${style.delay}s`, filter: 'blur(1px)' }} />;
-}
-
-function TiltCard({ children, className = "", style = {} }) {
-  const ref = useRef(null);
-  const handleMouseMove = (e) => {
-    const el = ref.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width - 0.5) * 10; // Reduced tilt for smoother large cards
-    const y = ((e.clientY - rect.top) / rect.height - 0.5) * -10;
-    el.style.transform = `perspective(1000px) rotateY(${x}deg) rotateX(${y}deg) scale3d(1.01,1.01,1.01)`;
-  };
-  const handleMouseLeave = () => { if (ref.current) ref.current.style.transform = 'perspective(1000px) rotateY(0deg) rotateX(0deg) scale3d(1,1,1)'; };
-  return <div ref={ref} className={className} style={{ transition: 'transform 0.2s ease-out', transformStyle: 'preserve-3d', ...style }} onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave}>{children}</div>;
-}
-
-// ==========================================
-// 2. LOGOLOOP COMPONENT
-// ==========================================
-const ANIMATION_CONFIG = { SMOOTH_TAU: 0.25, MIN_COPIES: 2, COPY_HEADROOM: 2 };
-const toCssLength = value => (typeof value === 'number' ? `${value}px` : (value ?? undefined));
-const cx = (...parts) => parts.filter(Boolean).join(' ');
-
-const useResizeObserver = (callback, elements, dependencies) => {
-  useEffect(() => {
-    if (!window.ResizeObserver) {
-      const handleResize = () => callback();
-      window.addEventListener('resize', handleResize);
-      callback();
-      return () => window.removeEventListener('resize', handleResize);
-    }
-    const observers = elements.map(ref => {
-      if (!ref.current) return null;
-      const observer = new ResizeObserver(callback);
-      observer.observe(ref.current);
-      return observer;
-    });
-    callback();
-    return () => observers.forEach(observer => observer?.disconnect());
-  }, [callback, elements, dependencies]);
-};
-
-const useImageLoader = (seqRef, onLoad, dependencies) => {
-  useEffect(() => {
-    const images = seqRef.current?.querySelectorAll('img') ?? [];
-    if (images.length === 0) { onLoad(); return; }
-    let remainingImages = images.length;
-    const handleImageLoad = () => { remainingImages -= 1; if (remainingImages === 0) onLoad(); };
-    images.forEach(img => {
-      if (img.complete) handleImageLoad();
-      else {
-        img.addEventListener('load', handleImageLoad, { once: true });
-        img.addEventListener('error', handleImageLoad, { once: true });
-      }
-    });
-    return () => images.forEach(img => { img.removeEventListener('load', handleImageLoad); img.removeEventListener('error', handleImageLoad); });
-  }, [onLoad, seqRef, dependencies]);
-};
-
-const useAnimationLoop = (trackRef, targetVelocity, seqWidth, seqHeight, isHovered, hoverSpeed, isVertical) => {
-  const rafRef = useRef(null);
-  const lastTimestampRef = useRef(null);
-  const offsetRef = useRef(0);
-  const velocityRef = useRef(0);
-
-  useEffect(() => {
-    const track = trackRef.current;
-    if (!track) return;
-    const prefersReduced = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const seqSize = isVertical ? seqHeight : seqWidth;
-
-    if (seqSize > 0) {
-      offsetRef.current = ((offsetRef.current % seqSize) + seqSize) % seqSize;
-      track.style.transform = isVertical ? `translate3d(0, ${-offsetRef.current}px, 0)` : `translate3d(${-offsetRef.current}px, 0, 0)`;
-    }
-
-    if (prefersReduced) {
-      track.style.transform = 'translate3d(0, 0, 0)';
-      return () => { lastTimestampRef.current = null; };
-    }
-
-    const animate = timestamp => {
-      if (lastTimestampRef.current === null) lastTimestampRef.current = timestamp;
-      const deltaTime = Math.max(0, timestamp - lastTimestampRef.current) / 1000;
-      lastTimestampRef.current = timestamp;
-      const target = isHovered && hoverSpeed !== undefined ? hoverSpeed : targetVelocity;
-      const easingFactor = 1 - Math.exp(-deltaTime / ANIMATION_CONFIG.SMOOTH_TAU);
-      velocityRef.current += (target - velocityRef.current) * easingFactor;
-      if (seqSize > 0) {
-        let nextOffset = offsetRef.current + velocityRef.current * deltaTime;
-        nextOffset = ((nextOffset % seqSize) + seqSize) % seqSize;
-        offsetRef.current = nextOffset;
-        track.style.transform = isVertical ? `translate3d(0, ${-offsetRef.current}px, 0)` : `translate3d(${-offsetRef.current}px, 0, 0)`;
-      }
-      rafRef.current = requestAnimationFrame(animate);
-    };
-    rafRef.current = requestAnimationFrame(animate);
-    return () => {
-      if (rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
-      lastTimestampRef.current = null;
-    };
-  }, [targetVelocity, seqWidth, seqHeight, isHovered, hoverSpeed, isVertical, trackRef]);
-};
-
-const LogoLoop = memo(({ logos, speed = 120, direction = 'left', width = '100%', logoHeight = 28, gap = 32, pauseOnHover, hoverSpeed, fadeOut = false, fadeOutColor, scaleOnHover = false }) => {
-  const containerRef = useRef(null);
-  const trackRef = useRef(null);
-  const seqRef = useRef(null);
-  const [seqWidth, setSeqWidth] = useState(0);
-  const [copyCount, setCopyCount] = useState(ANIMATION_CONFIG.MIN_COPIES);
-  const [isHovered, setIsHovered] = useState(false);
-
-  const effectiveHoverSpeed = useMemo(() => hoverSpeed !== undefined ? hoverSpeed : (pauseOnHover === true ? 0 : undefined), [hoverSpeed, pauseOnHover]);
-  const targetVelocity = useMemo(() => Math.abs(speed) * (direction === 'left' ? 1 : -1) * (speed < 0 ? -1 : 1), [speed, direction]);
-
-  const updateDimensions = useCallback(() => {
-    const containerWidth = containerRef.current?.clientWidth ?? 0;
-    const sequenceWidth = seqRef.current?.getBoundingClientRect?.().width ?? 0;
-    if (sequenceWidth > 0) {
-      setSeqWidth(Math.ceil(sequenceWidth));
-      setCopyCount(Math.max(ANIMATION_CONFIG.MIN_COPIES, Math.ceil(containerWidth / sequenceWidth) + ANIMATION_CONFIG.COPY_HEADROOM));
-    }
-  }, []);
-
-  useResizeObserver(updateDimensions, [containerRef, seqRef], [logos, gap, logoHeight]);
-  useImageLoader(seqRef, updateDimensions, [logos, gap, logoHeight]);
-  useAnimationLoop(trackRef, targetVelocity, seqWidth, 0, isHovered, effectiveHoverSpeed, false);
-
-  const cssVariables = useMemo(() => ({ '--logoloop-gap': `${gap}px`, '--logoloop-logoHeight': `${logoHeight}px` }), [gap, logoHeight]);
-  const logoLists = useMemo(() => Array.from({ length: copyCount }, (_, copyIndex) => <ul className="flex items-center flex-row" key={`copy-${copyIndex}`} role="list" aria-hidden={copyIndex > 0} ref={copyIndex === 0 ? seqRef : undefined}>{logos.map((item, itemIndex) => <li className="flex-none text-[length:var(--logoloop-logoHeight)] leading-[1] mr-[var(--logoloop-gap)]" key={`${copyIndex}-${itemIndex}`}>{item.node}</li>)}</ul>), [copyCount, logos]);
-
-  return (
-    <div ref={containerRef} className="relative group overflow-x-hidden" style={{ width: '100%', ...cssVariables }} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
-      <div className="flex will-change-transform select-none relative z-0 flex-row w-max" ref={trackRef}>{logoLists}</div>
-    </div>
-  );
-});
-LogoLoop.displayName = 'LogoLoop';
-
 const retailLogos = [
   { node: <span className="font-bold text-2xl tracking-tighter text-[#0071ce] flex items-center gap-2">Walmart <Zap className="w-5 h-5 text-[#ffc220] fill-[#ffc220]"/></span> },
   { node: <span className="font-black text-2xl tracking-tighter text-[#e31837]">COSTCO <span className="text-[#005daal] font-bold">WHOLESALE</span></span> },
@@ -186,151 +30,6 @@ const retailLogos = [
   node: <div className="flex items-center justify-center px-8 py-3 h-16 bg-white/[0.06] border border-white/[0.12] rounded-2xl hover:bg-white/[0.15] hover:scale-105 hover:shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:border-cyan-500/30 transition-all duration-300 backdrop-blur-md cursor-default text-white">{logo.node}</div>
 }));
 
-// ==========================================
-// 3. HARDWARE SVGS & INTERACTIVE WRAPPER
-// ==========================================
-const HandheldSVG = () => (
-  <div className="w-full h-full pointer-events-none drop-shadow-[0_0_30px_rgba(139,92,246,0.15)]">
-    <svg width="100%" height="100%" viewBox="0 0 680 520" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="bodyGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#1e1e3a"/><stop offset="100%" stopColor="#0d0d1e"/></linearGradient>
-        <linearGradient id="screenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#0a1628"/><stop offset="100%" stopColor="#050d1a"/></linearGradient>
-        <linearGradient id="scanBeam" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#06b6d4" stopOpacity="0"/><stop offset="50%" stopColor="#06b6d4" stopOpacity="0.6"/><stop offset="100%" stopColor="#06b6d4" stopOpacity="0"/></linearGradient>
-        <linearGradient id="btnGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#06b6d4"/><stop offset="100%" stopColor="#0891b2"/></linearGradient>
-        <linearGradient id="highlightGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#ffffff" stopOpacity="0"/><stop offset="40%" stopColor="#ffffff" stopOpacity="0.07"/><stop offset="100%" stopColor="#ffffff" stopOpacity="0"/></linearGradient>
-        <filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-      </defs>
-      <rect x="200" y="30" width="280" height="460" rx="36" fill="url(#bodyGrad)" stroke="#2e2e5a" strokeWidth="1.5"/>
-      <rect x="202" y="32" width="276" height="180" rx="34" fill="url(#highlightGrad)"/>
-      <rect x="218" y="52" width="244" height="164" rx="12" fill="url(#screenGrad)" stroke="#1a2a4a" strokeWidth="1"/>
-      <text x="228" y="76" fill="#64748b" fontSize="9" fontWeight="600" letterSpacing="2">SCANPAY HANDHELD</text>
-      <rect x="228" y="84" width="90" height="28" rx="6" fill="#0f1a30" stroke="#1e3050" strokeWidth="0.5"/>
-      <text x="238" y="96" fill="#94a3b8" fontSize="8">Items</text>
-      <text x="238" y="107" fill="#06b6d4" fontSize="11" fontWeight="700">14</text>
-      <rect x="324" y="84" width="108" height="28" rx="6" fill="#0f1a30" stroke="#1e3050" strokeWidth="0.5"/>
-      <text x="334" y="96" fill="#94a3b8" fontSize="8">Total</text>
-      <text x="334" y="107" fill="#10b981" fontSize="11" fontWeight="700">$47.82</text>
-      <rect x="228" y="118" width="204" height="44" rx="6" fill="#060e1c" stroke="#0e2040" strokeWidth="0.5"/>
-      <line x1="238" y1="130" x2="238" y2="152" stroke="#1e3a5a" strokeWidth="1"/>
-      <line x1="248" y1="126" x2="248" y2="156" stroke="#1e3a5a" strokeWidth="1"/>
-      <line x1="255" y1="128" x2="255" y2="154" stroke="#0d2040" strokeWidth="0.8"/>
-      <line x1="261" y1="126" x2="261" y2="156" stroke="#1e3a5a" strokeWidth="1"/>
-      <line x1="323" y1="126" x2="323" y2="156" stroke="#1e3a5a" strokeWidth="1"/>
-      <line x1="416" y1="130" x2="416" y2="152" stroke="#0d2040" strokeWidth="0.8"/>
-      <line x1="422" y1="126" x2="422" y2="156" stroke="#1e3a5a" strokeWidth="1"/>
-      <rect x="228" y="126" width="10" height="30" rx="1" fill="#060e1c" stroke="none"/>
-      <rect x="420" y="126" width="12" height="30" rx="1" fill="#060e1c" stroke="none"/>
-      <g className="scan-beam"><rect x="228" y="128" width="204" height="6" rx="1" fill="url(#scanBeam)" opacity="0.8"/></g>
-      <rect x="228" y="170" width="204" height="8" rx="4" fill="#06b6d4" opacity="0.9" filter="url(#glow)"/>
-      <text x="340" y="177" textAnchor="middle" fill="#003344" fontSize="6" fontWeight="700" letterSpacing="1">SCAN ITEM</text>
-      <rect x="218" y="230" width="244" height="120" rx="10" fill="#0a0f1c" stroke="#1a1a3a" strokeWidth="0.5"/>
-      <text x="235" y="302" fill="#94a3b8" fontSize="8">Battery</text>
-      <rect x="286" y="296" width="22" height="6" rx="1.5" fill="#10b981" className="batt"/>
-      <text x="335" y="302" fill="#94a3b8" fontSize="8">Sync</text>
-      <circle cx="371" cy="299" r="4" fill="#10b981" className="blink"/>
-      <text x="340" y="334" textAnchor="middle" fill="white" fontSize="11" fontWeight="700" letterSpacing="0.5">Confirm &amp; Pay</text>
-      <rect x="218" y="364" width="244" height="50" rx="10" fill="#070c18" stroke="#111830" strokeWidth="0.5"/>
-      <text x="268" y="387" fill="#94a3b8" fontSize="9">Cart device dock</text>
-      <text x="268" y="399" fill="#475569" fontSize="8">Snap-fit magnetic mount</text>
-      <text x="148" y="88" textAnchor="middle" fill="#8b5cf6" fontSize="13" fontWeight="700">ScanPay</text>
-      <text x="148" y="106" textAnchor="middle" fill="#8b5cf6" fontSize="13" fontWeight="700">Handheld</text>
-      <circle cx="148" cy="130" r="30" fill="none" stroke="#8b5cf6" strokeWidth="0.5" opacity="0.3"/>
-      <text x="534" y="200" textAnchor="middle" fill="#94a3b8" fontSize="9" fontWeight="600">14h</text>
-      <text x="534" y="214" textAnchor="middle" fill="#475569" fontSize="8">battery</text>
-    </svg>
-  </div>
-);
-
-const KioskSVG = () => (
-  <div className="w-full h-full pointer-events-none drop-shadow-[0_0_40px_rgba(6,182,212,0.1)]">
-    <svg width="100%" height="100%" viewBox="0 0 680 580" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="kBodyGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#1a1a32"/><stop offset="100%" stopColor="#0d0d1e"/></linearGradient>
-        <linearGradient id="kPoleGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#141428"/><stop offset="50%" stopColor="#222240"/><stop offset="100%" stopColor="#141428"/></linearGradient>
-        <linearGradient id="kBaseGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#1e1e3a"/><stop offset="100%" stopColor="#0d0d1c"/></linearGradient>
-        <linearGradient id="kScreenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#080f20"/><stop offset="100%" stopColor="#040a18"/></linearGradient>
-        <linearGradient id="kBtnGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#06b6d4"/><stop offset="100%" stopColor="#0891b2"/></linearGradient>
-        <linearGradient id="kScanLine" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#06b6d4" stopOpacity="0"/><stop offset="50%" stopColor="#06b6d4" stopOpacity="0.8"/><stop offset="100%" stopColor="#06b6d4" stopOpacity="0"/></linearGradient>
-        <linearGradient id="kHighlight" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ffffff" stopOpacity="0.06"/><stop offset="100%" stopColor="#ffffff" stopOpacity="0"/></linearGradient>
-        <filter id="kGlow"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-      </defs>
-
-      <rect x="255" y="490" width="170" height="18" rx="6" fill="url(#kBaseGrad)" stroke="#252545" strokeWidth="1"/>
-      <rect x="245" y="504" width="190" height="10" rx="5" fill="#111128" stroke="#1e1e3a" strokeWidth="0.5"/>
-      <rect x="235" y="510" width="210" height="8" rx="4" fill="#0d0d22" stroke="#1a1a38" strokeWidth="0.5"/>
-      
-      <rect x="313" y="390" width="54" height="104" rx="6" fill="url(#kPoleGrad)" stroke="#252545" strokeWidth="0.5"/>
-      <rect x="318" y="392" width="8" height="100" rx="3" fill="#1a1a38" opacity="0.4"/>
-      <rect x="354" y="392" width="8" height="100" rx="3" fill="#1a1a38" opacity="0.2"/>
-      
-      <rect x="215" y="80" width="250" height="316" rx="16" fill="url(#kBodyGrad)" stroke="#2a2a50" strokeWidth="1.5"/>
-      <rect x="216" y="81" width="248" height="160" rx="15" fill="url(#kHighlight)"/>
-      <rect x="228" y="95" width="224" height="160" rx="10" fill="url(#kScreenGrad)" stroke="#0e1e3c" strokeWidth="1"/>
-      
-      <text x="340" y="116" textAnchor="middle" fill="#334155" fontSize="8" fontWeight="600" letterSpacing="2">SCANPAY KIOSK PRO</text>
-      
-      <rect x="238" y="122" width="68" height="32" rx="5" fill="#0a1528" stroke="#112040" strokeWidth="0.5"/>
-      <text x="243" y="135" fill="#64748b" fontSize="7">Transactions</text>
-      <text x="243" y="148" fill="#06b6d4" fontSize="12" fontWeight="700">2,847</text>
-      
-      <rect x="312" y="122" width="68" height="32" rx="5" fill="#0a1528" stroke="#112040" strokeWidth="0.5"/>
-      <text x="317" y="135" fill="#64748b" fontSize="7">Revenue</text>
-      <text x="317" y="148" fill="#10b981" fontSize="12" fontWeight="700">$48.2k</text>
-      
-      <rect x="386" y="122" width="58" height="32" rx="5" fill="#0a1528" stroke="#112040" strokeWidth="0.5"/>
-      <text x="391" y="135" fill="#64748b" fontSize="7">Queue</text>
-      <text x="391" y="148" fill="#f59e0b" fontSize="12" fontWeight="700">0 sec</text>
-      
-      <rect x="238" y="162" width="206" height="56" rx="6" fill="#060e1c" stroke="#0c1e3a" strokeWidth="0.5"/>
-      <g className="kscan"><rect x="238" y="166" width="206" height="5" rx="1" fill="url(#kScanLine)" opacity="0.9"/></g>
-      
-      <text x="288" y="243" textAnchor="middle" fill="#001a22" fontSize="9" fontWeight="700" letterSpacing="0.5">Scan Item</text>
-      <rect x="228" y="272" width="224" height="50" rx="6" fill="#060d1c" stroke="#0c1830" strokeWidth="0.5"/>
-      <text x="263" y="294" textAnchor="middle" fill="#64748b" fontSize="7">Weight</text>
-      <text x="263" y="307" textAnchor="middle" fill="#06b6d4" fontSize="11" fontWeight="700">0.84kg</text>
-      <text x="331" y="294" textAnchor="middle" fill="#64748b" fontSize="7">Product</text>
-      <text x="331" y="307" textAnchor="middle" fill="#94a3b8" fontSize="9" fontWeight="600">Verified</text>
-      <circle cx="375" cy="297" r="5" fill="#10b981" className="kblink"/>
-      
-      <rect x="228" y="332" width="224" height="52" rx="8" fill="#070d1a" stroke="#0e1e38" strokeWidth="0.5"/>
-      <text x="280" y="355" fill="#94a3b8" fontSize="9" fontWeight="600">Payment ready</text>
-      <text x="280" y="368" fill="#475569" fontSize="8">Tap, insert, or swipe</text>
-      
-      <text x="108" y="120" textAnchor="middle" fill="#06b6d4" fontSize="14" fontWeight="700">ScanPay</text>
-      <text x="108" y="138" textAnchor="middle" fill="#06b6d4" fontSize="14" fontWeight="700">Kiosk Pro</text>
-      <circle cx="108" cy="128" r="36" fill="none" stroke="#06b6d4" strokeWidth="0.4" opacity="0.25"/>
-      <text x="572" y="140" textAnchor="middle" fill="#94a3b8" fontSize="9" fontWeight="600">15" display</text>
-      <text x="572" y="220" textAnchor="middle" fill="#94a3b8" fontSize="9" fontWeight="600">AI weight</text>
-    </svg>
-  </div>
-);
-
-function InteractiveHeroModel({ children }) {
-  const ref = useRef(null);
-  const handleMouseMove = (e) => {
-    const el = ref.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width - 0.5) * 40; 
-    const y = ((e.clientY - rect.top) / rect.height - 0.5) * -40; 
-    el.style.transform = `perspective(1200px) rotateY(${x}deg) rotateX(${y}deg) scale3d(1.05, 1.05, 1.05)`;
-  };
-  const handleMouseLeave = () => { if (ref.current) ref.current.style.transform = 'perspective(1200px) rotateY(15deg) rotateX(10deg) scale3d(1, 1, 1)'; };
-  useEffect(() => { handleMouseLeave(); }, []); 
-
-  return (
-    <div className="relative w-full max-w-[680px] h-[520px] mx-auto cursor-crosshair z-20 group" onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave}>
-      <div ref={ref} className="w-full h-full relative" style={{ transition: 'transform 0.3s ease-out', transformStyle: 'preserve-3d' }}>
-        <div className="absolute inset-20 bg-cyan-500/20 blur-[80px] rounded-full -z-10 group-hover:bg-cyan-400/30 transition-colors duration-500" style={{ transform: 'translateZ(-50px)' }} />
-        {children}
-      </div>
-    </div>
-  );
-}
-
-// ==========================================
-// 4. MAIN APP DATA & LOGIC
-// ==========================================
 const faqs = [
   { q: "How long does the hardware installation take?", a: "For a standard retail location, our technicians can deploy the complete ScanPay ecosystem within 48 hours. We operate during off-hours to prevent any disruption to your current store operations." },
   { q: "Does the system integrate with our current inventory?", a: "Yes. ThinkStack OS features plug-and-play API integrations for over 40 major retail ERPs and inventory management systems. Your stock levels sync in real-time." },
@@ -339,6 +38,7 @@ const faqs = [
 ];
 
 export default function App() {
+  const [currentPage, setCurrentPage] = useState('home');
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [addedId, setAddedId] = useState(null);
@@ -351,6 +51,12 @@ export default function App() {
   const [isAnnual, setIsAnnual] = useState(true);
   const [openFaq, setOpenFaq] = useState(null);
 
+  // User Accounts Data
+  const [orders, setOrders] = useState([]);
+  const [savedAddresses, setSavedAddresses] = useState([
+    { id: 1, name: 'Home', address: '123 Tech Lane, San Francisco, CA 94107', isDefault: true }
+  ]);
+
   // DYNAMIC PRODUCTS (Formatted to match the Bento Split design in reference image)
   const products = useMemo(() => [
     { 
@@ -360,8 +66,8 @@ export default function App() {
       specs: [{l: "Processor", v: "Octa-core ARM"}, {l: "Display", v: "15.6\" 4K Touch"}, {l: "Connectivity", v: "Wi-Fi 6, 5G LTE"}], 
       icon: Server, 
       customGraphic: <KioskSVG />, 
-      accent: "#06b6d4", accentDark: "#0e7490", glow: "rgba(6,182,212,0.15)", badge: "Most Popular", span: "lg:col-span-2",
-      hideDetails: true // Hide HTML details so it looks exactly like the left card in image_b52452.jpg
+      accent: "#06b6d4", accentDark: "#0e7490", glow: "rgba(6,182,212,0.15)", badge: "Most Popular", span: "lg:col-span-1",
+      hideDetails: false
     },
     { 
       id: 2, name: "ScanPay Handheld", type: "Hardware (5-Pack)", price: 899, billing: "One-time", 
@@ -373,12 +79,12 @@ export default function App() {
       accent: "#8b5cf6", accentDark: "#7c3aed", glow: "rgba(139,92,246,0.15)", badge: null, span: "lg:col-span-1" 
     },
     { 
-      id: 3, name: "ThinkStack OS", type: "Enterprise Software", price: isAnnual ? 2499 : 249, billing: isAnnual ? "per year" : "per month", 
+      id: 3, name: "ThinkStack OS", type: "Enterprise Software", price: isAnnual ? 25550 : 2499, originalPrice: isAnnual ? 29988 : null, billing: isAnnual ? "per year" : "per month", 
       description: "The intelligence layer behind your hardware. Centralized dashboard for inventory management, buyer heatmaps, and partner ad delivery.", 
       features: ["Live store analytics", "Targeted ad engine", "24/7 priority support"], 
       specs: [{l: "Uptime", v: "99.99% SLA"}, {l: "Updates", v: "Over-the-air (OTA)"}, {l: "Support", v: "24/7 Dedicated Team"}], 
       icon: LineChart, 
-      accent: "#f59e0b", accentDark: "#d97706", glow: "rgba(245,158,11,0.15)", badge: isAnnual ? "Save 17%" : null, span: "lg:col-span-3" 
+      accent: "#f59e0b", accentDark: "#d97706", glow: "rgba(245,158,11,0.15)", badge: isAnnual ? "Save $4,438" : null, span: "lg:col-span-2" 
     }
   ], [isAnnual]);
 
@@ -427,6 +133,14 @@ export default function App() {
     setCheckoutStep('processing');
     setTimeout(() => {
       setCheckoutStep('success');
+      const newOrder = {
+        id: `ORD-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+        date: new Date().toLocaleDateString(),
+        total: cart.reduce((t, item) => t + item.price, 0),
+        items: [...cart],
+        status: 'Processing'
+      };
+      setOrders(prev => [newOrder, ...prev]);
       setCart([]);
     }, 2000);
   };
@@ -485,17 +199,17 @@ export default function App() {
 
       {/* PREMIUM BACKGROUND - Z-INDEX SET TO 0 SO LINKS WORK */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-[#030305]">
-        <div style={{ position: 'absolute', top: '-10%', left: '-10%', width: '50vw', height: '50vw', background: 'radial-gradient(circle, rgba(6,182,212,0.15) 0%, transparent 60%)', filter: 'blur(60px)', animation: 'aurora 25s linear infinite', transformOrigin: 'center center' }} />
-        <div style={{ position: 'absolute', top: '20%', right: '-20%', width: '60vw', height: '60vw', background: 'radial-gradient(circle, rgba(139,92,246,0.12) 0%, transparent 60%)', filter: 'blur(80px)', animation: 'aurora 30s linear infinite reverse', transformOrigin: 'top left' }} />
-        <div style={{ position: 'absolute', bottom: '-20%', left: '10%', width: '50vw', height: '50vw', background: 'radial-gradient(circle, rgba(245,158,11,0.08) 0%, transparent 60%)', filter: 'blur(70px)', animation: 'aurora 20s linear infinite', transformOrigin: 'bottom right' }} />
+        <div style={{ position: 'absolute', top: '-10%', left: '-10%', width: '50vw', height: '50vw', background: 'radial-gradient(circle, rgba(6,182,212,0.15) 0%, transparent 60%)', animation: 'aurora 25s linear infinite', transformOrigin: 'center center', willChange: 'transform' }} />
+        <div style={{ position: 'absolute', top: '20%', right: '-20%', width: '60vw', height: '60vw', background: 'radial-gradient(circle, rgba(139,92,246,0.12) 0%, transparent 60%)', animation: 'aurora 30s linear infinite reverse', transformOrigin: 'top left', willChange: 'transform' }} />
+        <div style={{ position: 'absolute', bottom: '-20%', left: '10%', width: '50vw', height: '50vw', background: 'radial-gradient(circle, rgba(245,158,11,0.08) 0%, transparent 60%)', animation: 'aurora 20s linear infinite', transformOrigin: 'bottom right', willChange: 'transform' }} />
         <div className="absolute inset-0 opacity-[0.03] mix-blend-overlay" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`, zIndex: 1 }} />
-        {particles.map((p, i) => <Particle key={i} style={{...p, zIndex: 2}} />)}
+        {particles.map((p, i) => <Particle key={i} style={{...p, zIndex: 2, willChange: 'transform'}} />)}
       </div>
 
       {/* Navbar - Higher Z-Index */}
       <nav className="fixed inset-x-0 top-0 z-50 px-4 pt-4">
         <div className="max-w-7xl mx-auto glass-card rounded-2xl px-6 py-4 flex justify-between items-center bg-[#0d1117]/80" style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo(0,0)}>
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => { setCurrentPage('home'); window.scrollTo(0,0); }}>
             <div className="relative">
               <div className="absolute inset-0 rounded-xl bg-cyan-500 blur-md opacity-50" />
               <div className="relative bg-gradient-to-br from-cyan-400 to-blue-600 p-2.5 rounded-xl"><Zap className="text-white w-5 h-5 fill-white" /></div>
@@ -503,11 +217,56 @@ export default function App() {
             <span className="text-xl font-black tracking-tight hero-title">ScanPay</span>
           </div>
           
-          {/* THESE LINKS NOW WORK PERFECTLY */}
+          {/* MEGA DROPDOWN NAVIGATION */}
           <div className="hidden md:flex items-center gap-8 text-sm font-bold text-slate-400 relative z-50">
-            <a href="#products" className="hover:text-white transition-colors drop-shadow-md">Products</a>
-            <a href="#why-us" className="hover:text-white transition-colors drop-shadow-md">Why Us</a>
-            <a href="#docs" className="hover:text-white transition-colors drop-shadow-md">Developers</a>
+            {/* Products Dropdown */}
+            <div className="relative group py-4 cursor-pointer">
+              <div className="flex items-center gap-1 hover:text-white transition-colors drop-shadow-md">
+                Products <ChevronDown className="w-4 h-4 transition-transform group-hover:rotate-180" />
+              </div>
+              <div className="absolute top-[80%] left-0 w-64 bg-[#0d1117]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-2 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-300 shadow-[0_10px_40px_rgba(0,0,0,0.5)]">
+                <div className="p-3 hover:bg-white/5 rounded-xl cursor-pointer transition-colors" onClick={() => setCurrentPage('products')}>
+                  <div className="font-bold text-white text-base mb-1">Hardware Ecosystem</div>
+                  <div className="text-xs text-slate-400">Explore Kiosk Pro & Handhelds</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Services Dropdown */}
+            <div className="relative group py-4 cursor-pointer">
+              <div className="flex items-center gap-1 hover:text-white transition-colors drop-shadow-md">
+                Services <ChevronDown className="w-4 h-4 transition-transform group-hover:rotate-180" />
+              </div>
+              <div className="absolute top-[80%] left-0 w-64 bg-[#0d1117]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-2 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-300 shadow-[0_10px_40px_rgba(0,0,0,0.5)]">
+                <div className="p-3 hover:bg-white/5 rounded-xl cursor-pointer transition-colors" onClick={() => setCurrentPage('services')}>
+                  <div className="font-bold text-white text-base mb-1">ThinkStack OS</div>
+                  <div className="text-xs text-slate-400">Features, OS analytics & cloud management</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Developers / Docs */}
+            <div className="py-4 cursor-pointer hover:text-white transition-colors drop-shadow-md" onClick={() => setCurrentPage('docs')}>
+              Developers
+            </div>
+            
+            {/* Account Dropdown */}
+            <div className="relative group py-4 cursor-pointer">
+              <div className="flex items-center gap-1 hover:text-white transition-colors drop-shadow-md">
+                Account <ChevronDown className="w-4 h-4 transition-transform group-hover:rotate-180" />
+              </div>
+              <div className="absolute top-[80%] left-0 w-56 bg-[#0d1117]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-2 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-300 shadow-[0_10px_40px_rgba(0,0,0,0.5)]">
+                <div className="p-2.5 hover:bg-white/5 rounded-xl cursor-pointer transition-colors" onClick={() => setCurrentPage('profile')}>
+                  <div className="font-bold text-white text-sm">Profile</div>
+                </div>
+                <div className="p-2.5 hover:bg-white/5 rounded-xl cursor-pointer transition-colors" onClick={() => setCurrentPage('orders')}>
+                  <div className="font-bold text-white text-sm">Order History</div>
+                </div>
+                <div className="p-2.5 hover:bg-white/5 rounded-xl cursor-pointer transition-colors" onClick={() => setCurrentPage('addresses')}>
+                  <div className="font-bold text-white text-sm">Saved Addresses</div>
+                </div>
+              </div>
+            </div>
           </div>
           
           <div className="flex items-center gap-4 relative z-50">
@@ -531,8 +290,11 @@ export default function App() {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="relative z-10 pt-48 pb-10 px-4 flex flex-col items-center text-center pointer-events-auto">
+      {/* Routing Logic */}
+      {currentPage === 'home' && (
+        <>
+          {/* Hero Section */}
+          <section className="relative z-10 pt-48 pb-10 px-4 flex flex-col items-center text-center pointer-events-auto">
         <div className="max-w-5xl mx-auto">
           <Reveal delay={0}>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-cyan-500/25 bg-cyan-500/8 text-cyan-400 text-xs font-bold tracking-[0.15em] uppercase mb-10">
@@ -606,26 +368,25 @@ export default function App() {
             </div>
           </Reveal>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
             {products.map((product, idx) => {
               const Icon = product.icon;
               const isAdded = addedId === product.id;
               
               return (
                 <Reveal delay={idx * 150} key={product.id} className={product.span}>
-                  <TiltCard className="product-card relative rounded-[2rem] overflow-hidden flex flex-col h-full group" style={{ background: '#0a0a12', border: '1px solid rgba(255,255,255,0.05)', boxShadow: 'inset 0 0 80px rgba(0,0,0,0.5), 0 20px 40px rgba(0,0,0,0.4)' }}>
+                  <TiltCard className={`product-card relative rounded-[2rem] overflow-hidden flex flex-col ${product.span === 'lg:col-span-2' && !product.hideDetails ? 'md:flex-row' : ''} h-full group`} style={{ background: '#0a0a12', border: '1px solid rgba(255,255,255,0.05)', boxShadow: 'inset 0 0 80px rgba(0,0,0,0.5), 0 20px 40px rgba(0,0,0,0.4)' }}>
                     
                     <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '60%', height: '60%', borderRadius: '50%', background: product.glow, filter: 'blur(80px)', pointerEvents: 'none', opacity: 0.6 }} />
 
                     {product.customGraphic && (
-                      <div className={`w-full relative z-10 flex items-center justify-center ${product.hideDetails ? 'h-full p-4' : 'pt-10 px-6'}`}>
+                      <div className={`w-full ${product.span === 'lg:col-span-2' && !product.hideDetails ? 'md:w-1/2' : ''} relative z-10 flex items-center justify-center ${product.hideDetails ? 'h-full p-4' : 'pt-10 px-6'}`}>
                         {product.customGraphic}
                       </div>
                     )}
 
-                    {/* ONLY SHOW HTML DETAILS IF NOT HIDDEN (E.g. Handheld & OS show details, Kiosk Pro matches the image by hiding them) */}
                     {!product.hideDetails && (
-                      <div className={`p-8 flex flex-col flex-1 relative z-10 ${product.customGraphic ? 'pt-4' : ''}`}>
+                      <div className={`p-8 flex flex-col flex-1 relative z-10 ${product.span === 'lg:col-span-2' ? 'md:w-1/2 md:justify-center' : ''} ${product.customGraphic ? 'pt-4 md:pt-8' : ''}`}>
                         
                         {!product.customGraphic && (
                           <div style={{ width: 60, height: 60, borderRadius: 16, background: `${product.accent}15`, border: `1px solid ${product.accent}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28 }} className="group-hover:scale-110 transition-transform duration-300">
@@ -637,7 +398,11 @@ export default function App() {
                         
                         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-4">
                           <h3 className="hero-title text-2xl md:text-3xl font-black text-white leading-tight">{product.name}</h3>
-                          <div className="md:text-right flex-shrink-0"><div className="text-2xl font-black text-white">${product.price.toLocaleString()}</div><div className="text-xs text-slate-500 mt-0.5">{product.billing}</div></div>
+                          <div className="md:text-right flex-shrink-0 flex flex-col md:items-end">
+                            {product.originalPrice && <div className="text-sm font-bold text-slate-500 line-through mb-0.5">${product.originalPrice.toLocaleString()}</div>}
+                            <div className="text-2xl font-black text-white">${product.price.toLocaleString()}</div>
+                            <div className="text-xs text-slate-500 mt-0.5">{product.billing}</div>
+                          </div>
                         </div>
                         
                         <p className="text-slate-400 text-sm leading-relaxed mb-8">{product.description}</p>
@@ -795,6 +560,8 @@ export default function App() {
           </Reveal>
         </div>
       </section>
+        </>
+      )}
 
       {/* SIDEBAR CART WITH CHECKOUT FLOW */}
       {isCartOpen && (
@@ -929,6 +696,14 @@ export default function App() {
           <div className="text-sm text-slate-500">© 2026 Think Stack. All rights reserved.</div>
         </div>
       </footer>
+
+      {currentPage === 'products' && <ProductsPage addToCart={addToCart} addedId={addedId} />}
+      {currentPage === 'services' && <ServicesPage />}
+      {currentPage === 'docs' && <DocsPage />}
+      {currentPage === 'profile' && <ProfilePage user={user} onLogin={handleGoogleLogin} onLogout={handleLogout} />}
+      {currentPage === 'orders' && <OrderHistoryPage setCurrentPage={setCurrentPage} orders={orders} />}
+      {currentPage === 'addresses' && <SavedAddressesPage setCurrentPage={setCurrentPage} savedAddresses={savedAddresses} setSavedAddresses={setSavedAddresses} />}
+
     </div>
   );
 }
