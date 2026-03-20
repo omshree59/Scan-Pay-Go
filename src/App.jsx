@@ -52,10 +52,18 @@ export default function App() {
   const [openFaq, setOpenFaq] = useState(null);
 
   // User Accounts Data
-  const [orders, setOrders] = useState([]);
-  const [savedAddresses, setSavedAddresses] = useState([
-    { id: 1, name: 'Home', address: '123 Tech Lane, San Francisco, CA 94107', isDefault: true }
-  ]);
+  const [orders, setOrders] = useState(() => {
+    try {
+      const saved = localStorage.getItem('scanpay_orders');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+  const [savedAddresses, setSavedAddresses] = useState(() => {
+    try {
+      const saved = localStorage.getItem('scanpay_addresses');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
 
   // DYNAMIC PRODUCTS (Formatted to match the Bento Split design in reference image)
   const products = useMemo(() => [
@@ -91,6 +99,14 @@ export default function App() {
   const [particles] = useState(() => Array.from({ length: 18 }, (_, i) => ({ size: Math.random() * 4 + 2, x: Math.random() * 100, y: Math.random() * 100, color: ['#06b6d4', '#8b5cf6', '#f59e0b', '#3b82f6'][i % 4], opacity: Math.random() * 0.3 + 0.05, duration: Math.random() * 8 + 6, delay: Math.random() * 5 })));
 
 
+
+  useEffect(() => {
+    localStorage.setItem('scanpay_orders', JSON.stringify(orders));
+  }, [orders]);
+
+  useEffect(() => {
+    localStorage.setItem('scanpay_addresses', JSON.stringify(savedAddresses));
+  }, [savedAddresses]);
 
   useEffect(() => {
     if (auth) {
@@ -133,11 +149,20 @@ export default function App() {
     setCheckoutStep('processing');
     setTimeout(() => {
       setCheckoutStep('success');
+      const sanitizedItems = cart.map(item => ({
+        id: item.id,
+        name: item.name,
+        type: item.type,
+        price: item.price,
+        billing: item.billing,
+        accent: item.accent
+      }));
+
       const newOrder = {
         id: `ORD-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
         date: new Date().toLocaleDateString(),
         total: cart.reduce((t, item) => t + item.price, 0),
-        items: [...cart],
+        items: sanitizedItems,
         status: 'Processing'
       };
       setOrders(prev => [newOrder, ...prev]);
