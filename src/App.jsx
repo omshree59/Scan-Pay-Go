@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
-import { ShoppingCart, Server, Smartphone, LineChart, CheckCircle, X, ChevronRight, Zap, ArrowRight, Shield, BarChart3, Layers, Star, Users, TrendingUp, Package, Terminal, FileJson, Code, LogOut, CreditCard, Lock, Loader2, ChevronDown } from 'lucide-react';
+import { ShoppingCart, Server, Smartphone, LineChart, CheckCircle, X, ChevronRight, Zap, ArrowRight, Shield, BarChart3, Layers, Star, Users, TrendingUp, Package, Terminal, FileJson, Code, LogOut, CreditCard, Lock, Loader2, ChevronDown, Calendar } from 'lucide-react';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
 
 import { Reveal, Particle, TiltCard, HandheldSVG, KioskSVG, InteractiveHeroModel, LogoLoop, usePageLoader, HomePageSkeleton, ProductsPageSkeleton, ServicesPageSkeleton, DocsPageSkeleton, ProfilePageSkeleton, OrderHistoryPageSkeleton, SavedAddressesPageSkeleton } from './components/Shared';
+import { BookDemoModal, LiveChatWidget, ComparisonTable } from './components/BusinessFeatures';
 // Lazy-loaded pages — each becomes its own async JS chunk
 const ProductsPage     = React.lazy(() => import('./pages/ProductsPage'));
 const ServicesPage     = React.lazy(() => import('./pages/ServicesPage'));
@@ -10,6 +11,7 @@ const DocsPage         = React.lazy(() => import('./pages/DocsPage'));
 const ProfilePage      = React.lazy(() => import('./pages/ProfilePage'));
 const OrderHistoryPage = React.lazy(() => import('./pages/OrderHistoryPage'));
 const SavedAddressesPage = React.lazy(() => import('./pages/SavedAddressesPage'));
+const QuotePage        = React.lazy(() => import('./pages/QuotePage'));
 
 // IMPORT AUTH FROM YOUR SECURE FIREBASE.JS FILE
 import { auth } from './firebase';
@@ -56,6 +58,7 @@ export default function App() {
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [addedId, setAddedId] = useState(null);
+  const [isDemoOpen, setIsDemoOpen] = useState(false);
 
   // Initial app load skeleton — only fires once per session
   const [appReady, setAppReady] = useState(() => {
@@ -372,9 +375,10 @@ export default function App() {
               <a href="#products">
                 <button className="glow-btn bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold px-8 py-4 rounded-xl transition-all duration-300 flex items-center gap-2 text-sm shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:scale-105">Explore Products <ArrowRight className="w-4 h-4" /></button>
               </a>
-              <a href="#docs">
-                <button className="glass-card text-white font-semibold px-8 py-4 rounded-xl hover:bg-white/10 transition-colors text-sm flex items-center gap-2 hover:scale-105">View Documentation <Terminal className="w-4 h-4 text-slate-400" /></button>
-              </a>
+              <button onClick={() => setIsDemoOpen(true)} className="glow-btn bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold px-8 py-4 rounded-xl transition-all duration-300 flex items-center gap-2 text-sm shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:scale-105">
+                Book a Demo <Calendar className="w-4 h-4" />
+              </button>
+              <button onClick={() => setCurrentPage('quote')} className="glass-card text-white font-semibold px-8 py-4 rounded-xl hover:bg-white/10 transition-colors text-sm flex items-center gap-2 hover:scale-105">Get a Quote <ChevronRight className="w-4 h-4 text-slate-400" /></button>
             </div>
           </Reveal>
 
@@ -542,50 +546,8 @@ export default function App() {
         </div>
       </section>
 
-      {/* DEVELOPER DOCUMENTATION */}
-      <section id="docs" className="relative z-20 py-32 px-4 bg-gradient-to-b from-transparent to-[#06b6d4]/5 pointer-events-auto">
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16">
-          <div className="lg:w-1/2">
-            <Reveal>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/50 border border-slate-700 text-slate-300 text-xs font-bold tracking-wider uppercase mb-6 drop-shadow-md"><Code className="w-3 h-3"/> Developer First</div>
-              <h2 className="hero-title text-4xl md:text-5xl font-black text-white tracking-tight mb-6 drop-shadow-lg">Retail integration<br/>made effortless.</h2>
-              <p className="text-slate-400 text-lg leading-relaxed mb-8 drop-shadow-md">
-                We provide full retail integration support. Whether you use traditional POS systems or modern cloud databases, the ThinkStack OS API syncs your entire inventory in minutes.
-              </p>
-              <div className="space-y-4 mb-10">
-                <div className="flex gap-4">
-                  <div className="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0 border border-cyan-500/20"><Terminal className="w-5 h-5 text-cyan-400"/></div>
-                  <div>
-                    <h4 className="text-white font-bold drop-shadow-md">RESTful & GraphQL APIs</h4>
-                    <p className="text-sm text-slate-500 mt-1">Connect your existing ERP instantly with our thoroughly documented endpoints.</p>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0 border border-blue-500/20"><Shield className="w-5 h-5 text-blue-400"/></div>
-                  <div>
-                    <h4 className="text-white font-bold drop-shadow-md">Secure Payment Gateways</h4>
-                    <p className="text-sm text-slate-500 mt-1">We handle the payment gateway charges and PCI compliance routing.</p>
-                  </div>
-                </div>
-              </div>
-            </Reveal>
-          </div>
-          
-          <div className="lg:w-1/2 w-full">
-            <Reveal delay={200}>
-              <div className="rounded-2xl overflow-hidden border border-slate-700/50 bg-[#0d1117] shadow-[0_20px_50px_rgba(6,182,212,0.1)]">
-                <div className="bg-[#161b22] px-4 py-3 flex items-center gap-2 border-b border-slate-700/50">
-                  <div className="w-3 h-3 rounded-full bg-red-500"></div><div className="w-3 h-3 rounded-full bg-yellow-500"></div><div className="w-3 h-3 rounded-full bg-green-500"></div>
-                  <div className="ml-4 flex items-center gap-2 text-xs text-slate-500 font-mono"><FileJson className="w-3 h-3"/> sync_inventory.js</div>
-                </div>
-                <div className="p-6 overflow-x-auto text-sm font-mono text-slate-300 leading-relaxed">
-                  <pre><code><span className="text-purple-400">import</span> {'{ ThinkStack }'} <span className="text-purple-400">from</span> <span className="text-green-400">'@thinkstack/os-sdk'</span>;{'\n\n'}<span className="text-slate-500">// Initialize client with store credentials</span>{'\n'}<span className="text-purple-400">const</span> client = <span className="text-purple-400">new</span> <span className="text-amber-300">ThinkStack</span>({'{'}{'\n'}{'  '}apiKey: process.env.<span className="text-blue-300">THINKSTACK_API_KEY</span>,{'\n'}{'  '}storeId: <span className="text-green-400">'STR_9841_NYC'</span>{'\n'}{'}'});{'\n\n'}<span className="text-slate-500">// Real-time inventory sync hook</span>{'\n'}client.inventory.<span className="text-blue-300">onUpdate</span>(<span className="text-purple-400">async</span> (payload) =&gt; {'{'}{'\n'}{'  '}<span className="text-purple-400">try</span> {'{'}{'\n'}{'    '}<span className="text-purple-400">await</span> database.<span className="text-blue-300">sync</span>(payload.items);{'\n'}{'    '}console.<span className="text-blue-300">log</span>(<span className="text-green-400">`Synced ${'{payload.items.length}'} products`</span>);{'\n'}{'  '}{'}'} <span className="text-purple-400">catch</span> (err) {'{'}{'\n'}{'    '}console.<span className="text-blue-300">error</span>(<span className="text-green-400">'Sync failed:'</span>, err);{'\n'}{'  '}{'}'}{'\n'}{'}'});<span className="cursor-blink bg-cyan-400 text-transparent">_</span></code></pre>
-                </div>
-              </div>
-            </Reveal>
-          </div>
-        </div>
-      </section>
+      {/* COMPARISON TABLE */}
+      <ComparisonTable />
 
       {/* INTERACTIVE FAQ SECTION */}
       <section className="relative z-20 py-24 px-4 pointer-events-auto">
@@ -616,6 +578,12 @@ export default function App() {
       </section>
         </>
       )}
+
+      {/* BOOK DEMO MODAL */}
+      {isDemoOpen && <BookDemoModal onClose={() => setIsDemoOpen(false)} />}
+
+      {/* LIVE CHAT */}
+      <LiveChatWidget onBookDemo={() => setIsDemoOpen(true)} />
 
       {/* SIDEBAR CART WITH CHECKOUT FLOW */}
       {isCartOpen && (
@@ -757,6 +725,7 @@ export default function App() {
       {currentPage === 'profile'  && <React.Suspense fallback={<ProfilePageSkeleton />}><PageLoader skeleton={ProfilePageSkeleton}><ProfilePage user={user} onLogin={handleGoogleLogin} onLogout={handleLogout} /></PageLoader></React.Suspense>}
       {currentPage === 'orders'   && <React.Suspense fallback={<OrderHistoryPageSkeleton />}><PageLoader skeleton={OrderHistoryPageSkeleton}><OrderHistoryPage setCurrentPage={setCurrentPage} orders={orders} /></PageLoader></React.Suspense>}
       {currentPage === 'addresses'&& <React.Suspense fallback={<SavedAddressesPageSkeleton />}><PageLoader skeleton={SavedAddressesPageSkeleton}><SavedAddressesPage setCurrentPage={setCurrentPage} savedAddresses={savedAddresses} setSavedAddresses={setSavedAddresses} /></PageLoader></React.Suspense>}
+      {currentPage === 'quote'    && <React.Suspense fallback={<div className="pt-40 flex items-center justify-center min-h-screen"><div className="w-8 h-8 border-2 border-cyan-500 rounded-full animate-spin border-t-transparent" /></div>}><QuotePage setCurrentPage={setCurrentPage} /></React.Suspense>}
 
     </div>
   );

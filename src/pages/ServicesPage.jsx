@@ -1,6 +1,7 @@
 import React from 'react';
 import { Layers, BarChart3, Shield, Zap, CheckCircle, Smartphone } from 'lucide-react';
 import { Reveal, TiltCard } from '../components/Shared';
+import { ROICalculator, TestimonialsSection } from '../components/BusinessFeatures';
 
 export default function ServicesPage() {
   const services = [
@@ -105,6 +106,12 @@ export default function ServicesPage() {
           })}
         </div>
       </div>
+
+      {/* ROI CALCULATOR */}
+      <ROICalculator />
+
+      {/* TESTIMONIALS */}
+      <TestimonialsSection />
     </div>
   );
 }
