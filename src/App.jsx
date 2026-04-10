@@ -2,16 +2,30 @@ import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from '
 import { ShoppingCart, Server, Smartphone, LineChart, CheckCircle, X, ChevronRight, Zap, ArrowRight, Shield, BarChart3, Layers, Star, Users, TrendingUp, Package, Terminal, FileJson, Code, LogOut, CreditCard, Lock, Loader2, ChevronDown } from 'lucide-react';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
 
-import { Reveal, Particle, TiltCard, HandheldSVG, KioskSVG, InteractiveHeroModel, LogoLoop } from './components/Shared';
-import ProductsPage from './pages/ProductsPage';
-import ServicesPage from './pages/ServicesPage';
-import DocsPage from './pages/DocsPage';
-import ProfilePage from './pages/ProfilePage';
-import OrderHistoryPage from './pages/OrderHistoryPage';
-import SavedAddressesPage from './pages/SavedAddressesPage';
+import { Reveal, Particle, TiltCard, HandheldSVG, KioskSVG, InteractiveHeroModel, LogoLoop, usePageLoader, HomePageSkeleton, ProductsPageSkeleton, ServicesPageSkeleton, DocsPageSkeleton, ProfilePageSkeleton, OrderHistoryPageSkeleton, SavedAddressesPageSkeleton } from './components/Shared';
+// Lazy-loaded pages — each becomes its own async JS chunk
+const ProductsPage     = React.lazy(() => import('./pages/ProductsPage'));
+const ServicesPage     = React.lazy(() => import('./pages/ServicesPage'));
+const DocsPage         = React.lazy(() => import('./pages/DocsPage'));
+const ProfilePage      = React.lazy(() => import('./pages/ProfilePage'));
+const OrderHistoryPage = React.lazy(() => import('./pages/OrderHistoryPage'));
+const SavedAddressesPage = React.lazy(() => import('./pages/SavedAddressesPage'));
 
 // IMPORT AUTH FROM YOUR SECURE FIREBASE.JS FILE
 import { auth } from './firebase';
+
+// ==========================================
+// PAGE LOADER WRAPPER
+// ==========================================
+function PageLoader({ skeleton: SkeletonComponent, ms = 900, children }) {
+  const { loading } = usePageLoader(ms);
+  if (loading) return <SkeletonComponent />;
+  return (
+    <div style={{ animation: 'skeletonFadeIn 0.4s ease forwards' }}>
+      {children}
+    </div>
+  );
+}
 
 // ==========================================
 // 4. MAIN APP DATA & LOGIC
@@ -42,6 +56,20 @@ export default function App() {
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [addedId, setAddedId] = useState(null);
+
+  // Initial app load skeleton — only fires once per session
+  const [appReady, setAppReady] = useState(() => {
+    try { return sessionStorage.getItem('scan_pay_loaded') === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    if (!appReady) {
+      const t = setTimeout(() => {
+        setAppReady(true);
+        try { sessionStorage.setItem('scan_pay_loaded', '1'); } catch {}
+      }, 1000);
+      return () => clearTimeout(t);
+    }
+  }, [appReady]);
   
   const [user, setUser] = useState(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -179,8 +207,8 @@ export default function App() {
     <div className="min-h-screen bg-[#030305] text-slate-50 font-sans overflow-x-hidden relative" style={{ fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800;900&family=Syne:wght@700;800&display=swap');
-        
+        /* Fonts loaded via preconnect + preload in index.html — no @import needed */
+
         html { scroll-behavior: smooth; }
         section { scroll-margin-top: 100px; }
 
@@ -193,7 +221,7 @@ export default function App() {
         @keyframes cartBounce { 0%, 100% { transform: scale(1); } 40% { transform: scale(1.3); } 70% { transform: scale(0.9); } }
         @keyframes aurora { 0% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(180deg) scale(1.2); } 100% { transform: rotate(360deg) scale(1); } }
         
-        .animate-float-model { animation: float-model 6s ease-in-out infinite; }
+        .animate-float-model { animation: float-model 6s ease-in-out infinite; will-change: transform; }
         .hero-title { font-family: 'Syne', sans-serif; }
         .glass-card { background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.05); }
         .glass-card:hover { border-color: rgba(255,255,255,0.1); }
@@ -207,17 +235,17 @@ export default function App() {
         ::-webkit-scrollbar-thumb { background: #1e1e3a; border-radius: 3px; }
         
         @keyframes scanMove { 0%,100% { transform: translateY(0px); opacity: 0.9; } 50% { transform: translateY(44px); opacity: 1; } }
-        .scan-beam { animation: scanMove 2s ease-in-out infinite; }
+        .scan-beam { animation: scanMove 2s ease-in-out infinite; will-change: transform; }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
         .blink { animation: blink 1.4s ease-in-out infinite; }
         @keyframes battPulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
-        .batt { animation: battPulse 2s ease-in-out infinite; }
+        .batt { animation: battPulse 2s ease-in-out infinite; will-change: opacity; }
         @keyframes kScan { 0%,100% { transform: translateY(0px); opacity:1; } 50% { transform: translateY(52px); opacity:0.7; } }
-        .kscan { animation: kScan 2.4s ease-in-out infinite; }
+        .kscan { animation: kScan 2.4s ease-in-out infinite; will-change: transform; }
         @keyframes kBlink { 0%,100%{opacity:1} 50%{opacity:0.2} }
-        .kblink { animation: kBlink 1.2s ease-in-out infinite; }
+        .kblink { animation: kBlink 1.2s ease-in-out infinite; will-change: opacity; }
         @keyframes blink-cursor { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-        .cursor-blink { animation: blink-cursor 1s step-end infinite; }
+        .cursor-blink { animation: blink-cursor 1s step-end infinite; will-change: opacity; }
       `}</style>
 
 
@@ -316,7 +344,8 @@ export default function App() {
       </nav>
 
       {/* Routing Logic */}
-      {currentPage === 'home' && (
+      {currentPage === 'home' && !appReady && <HomePageSkeleton />}
+      {currentPage === 'home' && appReady && (
         <>
           {/* Hero Section */}
           <section className="relative z-10 pt-48 pb-10 px-4 flex flex-col items-center text-center pointer-events-auto">
@@ -722,12 +751,12 @@ export default function App() {
         </div>
       </footer>
 
-      {currentPage === 'products' && <ProductsPage addToCart={addToCart} addedId={addedId} />}
-      {currentPage === 'services' && <ServicesPage />}
-      {currentPage === 'docs' && <DocsPage />}
-      {currentPage === 'profile' && <ProfilePage user={user} onLogin={handleGoogleLogin} onLogout={handleLogout} />}
-      {currentPage === 'orders' && <OrderHistoryPage setCurrentPage={setCurrentPage} orders={orders} />}
-      {currentPage === 'addresses' && <SavedAddressesPage setCurrentPage={setCurrentPage} savedAddresses={savedAddresses} setSavedAddresses={setSavedAddresses} />}
+      {currentPage === 'products' && <React.Suspense fallback={<ProductsPageSkeleton />}><PageLoader skeleton={ProductsPageSkeleton}><ProductsPage addToCart={addToCart} addedId={addedId} /></PageLoader></React.Suspense>}
+      {currentPage === 'services' && <React.Suspense fallback={<ServicesPageSkeleton />}><PageLoader skeleton={ServicesPageSkeleton}><ServicesPage /></PageLoader></React.Suspense>}
+      {currentPage === 'docs'     && <React.Suspense fallback={<DocsPageSkeleton />}><PageLoader skeleton={DocsPageSkeleton}><DocsPage /></PageLoader></React.Suspense>}
+      {currentPage === 'profile'  && <React.Suspense fallback={<ProfilePageSkeleton />}><PageLoader skeleton={ProfilePageSkeleton}><ProfilePage user={user} onLogin={handleGoogleLogin} onLogout={handleLogout} /></PageLoader></React.Suspense>}
+      {currentPage === 'orders'   && <React.Suspense fallback={<OrderHistoryPageSkeleton />}><PageLoader skeleton={OrderHistoryPageSkeleton}><OrderHistoryPage setCurrentPage={setCurrentPage} orders={orders} /></PageLoader></React.Suspense>}
+      {currentPage === 'addresses'&& <React.Suspense fallback={<SavedAddressesPageSkeleton />}><PageLoader skeleton={SavedAddressesPageSkeleton}><SavedAddressesPage setCurrentPage={setCurrentPage} savedAddresses={savedAddresses} setSavedAddresses={setSavedAddresses} /></PageLoader></React.Suspense>}
 
     </div>
   );

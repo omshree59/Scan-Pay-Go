@@ -3,7 +3,39 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Think Stack B2B</title>
+    <title>ScanPay — The Future of Retail Checkout</title>
+    <meta name="description" content="Eliminate queues, cut retail overhead by 40%, and turn every shopper's device into a secure, blazing-fast point of sale with ScanPay's hardware ecosystem." />
+
+    <!-- ① Preconnect: browser opens TCP/TLS to Google Fonts BEFORE CSS is parsed -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- dns-prefetch fallback for browsers that don't support preconnect -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+
+    <!-- ② Preload critical font stylesheets (above-the-fold fonts only) -->
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;0,9..40,900&family=Syne:wght@700;800&display=swap"
+    />
+
+    <!-- ③ Actually load the fonts (non-render-blocking via onload trick) -->
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;0,9..40,900&family=Syne:wght@700;800&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <!-- noscript fallback -->
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;0,9..40,900&family=Syne:wght@700;800&display=swap"
+      />
+    </noscript>
+
+    <!-- ④ Tailwind CDN (lower priority than fonts) -->
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
   <body>

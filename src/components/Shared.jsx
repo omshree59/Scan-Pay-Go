@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 export const Reveal = ({ children, delay = 0, className = "" }) => {
   const ref = useRef(null);
@@ -24,7 +24,26 @@ export const Reveal = ({ children, delay = 0, className = "" }) => {
 };
 
 export function Particle({ style }) {
-  return <div className="absolute rounded-full pointer-events-none" style={{ width: `${style.size}px`, height: `${style.size}px`, left: `${style.x}%`, top: `${style.y}%`, background: style.color, opacity: style.opacity, animation: `float ${style.duration}s ease-in-out infinite`, animationDelay: `${style.delay}s`, filter: 'blur(1px)' }} />;
+  return (
+    <div
+      className="absolute rounded-full pointer-events-none"
+      style={{
+        width: `${style.size}px`,
+        height: `${style.size}px`,
+        left: `${style.x}%`,
+        top: `${style.y}%`,
+        background: style.color,
+        opacity: style.opacity,
+        /* GPU compositing: promote to own layer, prevent layout reflow */
+        willChange: 'transform',
+        transform: 'translate3d(0,0,0)',
+        contain: 'strict',
+        filter: 'blur(1px)',
+        animation: `float ${style.duration}s ease-in-out infinite`,
+        animationDelay: `${style.delay}s`,
+      }}
+    />
+  );
 }
 
 export function TiltCard({ children, className = "", style = {} }) {
@@ -206,3 +225,359 @@ export const LogoLoop = ({ logos = [], speed = 40, direction = 'left', logoHeigh
     </div>
   );
 };
+
+// ============================================================
+// SKELETON SYSTEM
+// ============================================================
+
+/* Inject shimmer keyframes once */
+if (typeof document !== 'undefined' && !document.getElementById('skeleton-keyframes')) {
+  const el = document.createElement('style');
+  el.id = 'skeleton-keyframes';
+  el.textContent = `
+    @keyframes skeletonShimmer {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(200%); }
+    }
+    @keyframes skeletonFadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .skeleton-page { animation: skeletonFadeIn 0.25s ease forwards; }
+  `;
+  document.head.appendChild(el);
+}
+
+/**
+ * usePageLoader — returns { loading } that flips to false after `ms` ms.
+ */
+export function usePageLoader(ms = 900) {
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setLoading(false), ms);
+    return () => clearTimeout(t);
+  }, [ms]);
+  return { loading };
+}
+
+/**
+ * Base Skeleton block — a shimmer rectangle.
+ * All sizing / radius comes from className / style.
+ */
+export function Skeleton({ className = '', style = {} }) {
+  return (
+    <div
+      className={`relative overflow-hidden ${className}`}
+      style={{
+        background: 'rgba(255,255,255,0.04)',
+        border: '1px solid rgba(255,255,255,0.05)',
+        ...style,
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background:
+            'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.09) 50%, transparent 100%)',
+          animation: 'skeletonShimmer 1.6s ease-in-out infinite',
+          willChange: 'transform',
+        }}
+      />
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------
+// HOME PAGE SKELETON
+// ------------------------------------------------------------------
+export function HomePageSkeleton() {
+  return (
+    <div className="skeleton-page pt-48 pb-10 px-4">
+      {/* Hero */}
+      <div className="max-w-5xl mx-auto flex flex-col items-center gap-6">
+        <Skeleton className="rounded-full" style={{ width: 220, height: 28 }} />
+        <Skeleton className="rounded-2xl" style={{ width: '70%', height: 80 }} />
+        <Skeleton className="rounded-2xl" style={{ width: '50%', height: 28 }} />
+        <Skeleton className="rounded-2xl" style={{ width: '42%', height: 20 }} />
+        <div className="flex gap-4 mt-2">
+          <Skeleton className="rounded-xl" style={{ width: 180, height: 52 }} />
+          <Skeleton className="rounded-xl" style={{ width: 180, height: 52 }} />
+        </div>
+        {/* Hero model placeholder */}
+        <Skeleton className="rounded-3xl mt-4" style={{ width: '100%', maxWidth: 680, height: 280 }} />
+      </div>
+
+      {/* Logo strip */}
+      <div className="py-16 my-10 px-4">
+        <Skeleton className="rounded-full mx-auto mb-8" style={{ width: 200, height: 14 }} />
+        <div className="flex gap-6 overflow-hidden justify-center">
+          {[...Array(6)].map((_, i) => (
+            <Skeleton key={i} className="rounded-2xl shrink-0" style={{ width: 140, height: 64 }} />
+          ))}
+        </div>
+      </div>
+
+      {/* Products section */}
+      <div className="max-w-5xl mx-auto px-4">
+        <Skeleton className="rounded-lg mb-4" style={{ width: 160, height: 14 }} />
+        <Skeleton className="rounded-2xl mb-2" style={{ width: '55%', height: 52 }} />
+        <Skeleton className="rounded-lg mb-12" style={{ width: '40%', height: 20 }} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <Skeleton className="rounded-[2rem]" style={{ height: 400 }} />
+          <Skeleton className="rounded-[2rem]" style={{ height: 400 }} />
+          <Skeleton className="rounded-[2rem] lg:col-span-2" style={{ height: 320 }} />
+        </div>
+      </div>
+
+      {/* Why us */}
+      <div className="max-w-7xl mx-auto px-4 py-24">
+        <Skeleton className="rounded-lg mx-auto mb-4" style={{ width: 160, height: 14 }} />
+        <Skeleton className="rounded-2xl mx-auto mb-12" style={{ width: '40%', height: 44 }} />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="rounded-3xl" style={{ height: 280 }} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------
+// PRODUCTS PAGE SKELETON
+// ------------------------------------------------------------------
+export function ProductsPageSkeleton() {
+  return (
+    <div className="skeleton-page pt-40 pb-20 px-4 min-h-screen">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-20 flex flex-col items-center gap-4">
+          <Skeleton className="rounded-full" style={{ width: 180, height: 28 }} />
+          <Skeleton className="rounded-2xl" style={{ width: '60%', height: 72 }} />
+          <Skeleton className="rounded-2xl" style={{ width: '45%', height: 20 }} />
+        </div>
+
+        {/* Two product rows */}
+        <div className="space-y-20">
+          {[0, 1].map((idx) => (
+            <div
+              key={idx}
+              className={`flex flex-col ${
+                idx % 2 === 0 ? 'lg:flex-row' : 'lg:flex-row-reverse'
+              } gap-12 lg:gap-20 items-center`}
+            >
+              <div className="w-full lg:w-1/2">
+                <Skeleton className="rounded-[3rem]" style={{ height: 380 }} />
+              </div>
+              <div className="w-full lg:w-1/2 flex flex-col gap-4">
+                <Skeleton className="rounded-lg" style={{ width: 120, height: 12 }} />
+                <Skeleton className="rounded-2xl" style={{ width: '80%', height: 54 }} />
+                <Skeleton className="rounded-2xl" style={{ width: 120, height: 32 }} />
+                <Skeleton className="rounded-2xl" style={{ width: '90%', height: 60 }} />
+                <div className="grid grid-cols-2 gap-3">
+                  {[...Array(4)].map((_, i) => (
+                    <Skeleton key={i} className="rounded-xl" style={{ height: 48 }} />
+                  ))}
+                </div>
+                <Skeleton className="rounded-xl mt-2" style={{ width: '60%', height: 52 }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------
+// SERVICES PAGE SKELETON
+// ------------------------------------------------------------------
+export function ServicesPageSkeleton() {
+  return (
+    <div className="skeleton-page pt-40 pb-20 px-4 min-h-screen">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-20 flex flex-col items-center gap-4">
+          <Skeleton className="rounded-full" style={{ width: 180, height: 28 }} />
+          <Skeleton className="rounded-2xl" style={{ width: '55%', height: 72 }} />
+          <Skeleton className="rounded-2xl" style={{ width: '42%', height: 20 }} />
+        </div>
+
+        {/* 3-col cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {[...Array(3)].map((_, i) => (
+            <div
+              key={i}
+              className="rounded-[2.5rem] p-10 flex flex-col gap-4"
+              style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}
+            >
+              <Skeleton className="rounded-2xl" style={{ width: 72, height: 72 }} />
+              <Skeleton className="rounded-lg" style={{ width: 100, height: 12 }} />
+              <Skeleton className="rounded-2xl" style={{ width: '75%', height: 36 }} />
+              <Skeleton className="rounded-lg" style={{ height: 72 }} />
+              <div className="flex flex-col gap-2 mt-2">
+                {[...Array(4)].map((_, j) => (
+                  <Skeleton key={j} className="rounded-lg" style={{ height: 20 }} />
+                ))}
+              </div>
+              {i === 0 && (
+                <Skeleton className="rounded-2xl mt-4" style={{ height: 120 }} />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------
+// DOCS PAGE SKELETON
+// ------------------------------------------------------------------
+export function DocsPageSkeleton() {
+  return (
+    <div className="skeleton-page pt-40 pb-20 px-4 min-h-screen">
+      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-16">
+        {/* Left: text column */}
+        <div className="lg:w-1/2 flex flex-col gap-5">
+          <Skeleton className="rounded-full" style={{ width: 160, height: 26 }} />
+          <Skeleton className="rounded-2xl" style={{ width: '85%', height: 72 }} />
+          <Skeleton className="rounded-lg" style={{ height: 64 }} />
+          {[...Array(2)].map((_, i) => (
+            <div key={i} className="flex gap-4 items-start">
+              <Skeleton className="rounded-full shrink-0" style={{ width: 48, height: 48 }} />
+              <div className="flex-1 flex flex-col gap-2">
+                <Skeleton className="rounded-lg" style={{ width: '55%', height: 20 }} />
+                <Skeleton className="rounded-lg" style={{ height: 40 }} />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Right: code block */}
+        <div className="lg:w-1/2 w-full pt-4">
+          <div
+            className="rounded-2xl overflow-hidden"
+            style={{ border: '1px solid rgba(255,255,255,0.06)', background: '#0d1117' }}
+          >
+            {/* Mac chrome dots */}
+            <div
+              className="flex items-center gap-2 px-4 py-3"
+              style={{ background: '#161b22', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              <div className="flex gap-1.5">
+                {['#ef4444', '#eab308', '#22c55e'].map((c) => (
+                  <div key={c} style={{ width: 12, height: 12, borderRadius: '50%', background: c }} />
+                ))}
+              </div>
+              <Skeleton className="rounded-full ml-4" style={{ width: 120, height: 12 }} />
+            </div>
+            <div className="p-8 flex flex-col gap-3">
+              {[80, 60, 100, 50, 90, 70, 55, 80, 65].map((w, i) => (
+                <Skeleton key={i} className="rounded-md" style={{ width: `${w}%`, height: 16 }} />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------
+// PROFILE PAGE SKELETON
+// ------------------------------------------------------------------
+export function ProfilePageSkeleton() {
+  return (
+    <div className="skeleton-page pt-40 pb-20 px-4 min-h-screen">
+      <div className="max-w-2xl mx-auto flex flex-col items-center gap-6">
+        <Skeleton className="rounded-full" style={{ width: 80, height: 80 }} />
+        <Skeleton className="rounded-2xl" style={{ width: 200, height: 28 }} />
+        <Skeleton className="rounded-lg" style={{ width: 160, height: 16 }} />
+        <div className="w-full flex flex-col gap-4 mt-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="rounded-2xl" style={{ height: 72 }} />
+          ))}
+        </div>
+        <Skeleton className="rounded-xl w-full" style={{ height: 52 }} />
+      </div>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------
+// ORDER HISTORY PAGE SKELETON
+// ------------------------------------------------------------------
+export function OrderHistoryPageSkeleton() {
+  return (
+    <div className="skeleton-page pt-40 pb-20 px-4 min-h-screen">
+      <div className="max-w-4xl mx-auto">
+        <Skeleton className="rounded-2xl mb-2" style={{ width: 200, height: 40 }} />
+        <Skeleton className="rounded-lg mb-10" style={{ width: 260, height: 18 }} />
+        <div className="flex flex-col gap-5">
+          {[...Array(4)].map((_, i) => (
+            <div
+              key={i}
+              className="rounded-3xl p-6 flex flex-col gap-4"
+              style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}
+            >
+              <div className="flex justify-between">
+                <Skeleton className="rounded-lg" style={{ width: 140, height: 20 }} />
+                <Skeleton className="rounded-full" style={{ width: 90, height: 24 }} />
+              </div>
+              <Skeleton className="rounded-lg" style={{ width: 100, height: 14 }} />
+              <div className="flex gap-3">
+                {[...Array(2)].map((_, j) => (
+                  <Skeleton key={j} className="rounded-xl" style={{ width: 120, height: 40 }} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------
+// SAVED ADDRESSES PAGE SKELETON
+// ------------------------------------------------------------------
+export function SavedAddressesPageSkeleton() {
+  return (
+    <div className="skeleton-page pt-40 pb-20 px-4 min-h-screen">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex justify-between items-center mb-10">
+          <div className="flex flex-col gap-2">
+            <Skeleton className="rounded-2xl" style={{ width: 220, height: 40 }} />
+            <Skeleton className="rounded-lg" style={{ width: 280, height: 18 }} />
+          </div>
+          <Skeleton className="rounded-xl" style={{ width: 150, height: 48 }} />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {[...Array(4)].map((_, i) => (
+            <div
+              key={i}
+              className="rounded-3xl p-6 flex flex-col gap-3"
+              style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}
+            >
+              <div className="flex justify-between">
+                <Skeleton className="rounded-full" style={{ width: 80, height: 22 }} />
+                <Skeleton className="rounded-full" style={{ width: 56, height: 22 }} />
+              </div>
+              <Skeleton className="rounded-lg" style={{ height: 18 }} />
+              <Skeleton className="rounded-lg" style={{ width: '60%', height: 14 }} />
+              <div className="flex gap-2 mt-1">
+                <Skeleton className="rounded-lg" style={{ width: 70, height: 34 }} />
+                <Skeleton className="rounded-lg" style={{ width: 70, height: 34 }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
