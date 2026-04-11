@@ -546,6 +546,126 @@ export default function App() {
         </div>
       </section>
 
+      {/* ══════════════════════════════════════════
+           TV-FRAME VIDEO SHOWCASE
+         ══════════════════════════════════════════ */}
+      <Reveal delay={150}>
+        <section className="relative z-20 py-24 px-4 pointer-events-auto">
+          <div className="max-w-5xl mx-auto">
+
+            {/* Heading */}
+            <div className="text-center mb-16">
+              <p className="text-xs font-bold tracking-[0.2em] uppercase text-cyan-400 mb-3 drop-shadow-md">See It Live</p>
+              <h2 className="hero-title text-4xl md:text-5xl font-black text-white tracking-tight mb-4 drop-shadow-lg">
+                Watch ScanPay <span className="shimmer-text">In Action</span>
+              </h2>
+              <p className="text-slate-400 text-lg max-w-2xl mx-auto drop-shadow-md">
+                From scan to payment in seconds — experience the future of retail checkout.
+              </p>
+            </div>
+
+            {/* ── TV / MONITOR FRAME ── */}
+            <div className="flex flex-col items-center">
+
+              {/* Outer TV body */}
+              <div
+                className="relative w-full"
+                style={{
+                  background: 'linear-gradient(160deg, #1a1a2e 0%, #0f0f1a 60%, #12121f 100%)',
+                  borderRadius: '2rem',
+                  padding: '18px 18px 0 18px',
+                  boxShadow: '0 0 0 2px rgba(255,255,255,0.06), 0 0 60px rgba(6,182,212,0.18), 0 40px 80px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.08)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                }}
+              >
+                {/* Top bezel bar */}
+                <div className="flex items-center justify-between px-4 pb-3">
+                  {/* Brand badge */}
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-cyan-400" style={{ boxShadow: '0 0 6px #06b6d4' }} />
+                    <span className="text-[10px] font-black tracking-[0.25em] uppercase text-cyan-300 opacity-80">ThinkStack · LIVE</span>
+                  </div>
+                  {/* Indicator LEDs */}
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-red-500 opacity-70" />
+                    <div className="w-2 h-2 rounded-full bg-yellow-400 opacity-70" />
+                    <div className="w-2 h-2 rounded-full bg-green-400" style={{ boxShadow: '0 0 6px #22c55e' }} />
+                  </div>
+                </div>
+
+                {/* Screen surround — inner bevel */}
+                <div
+                  style={{
+                    borderRadius: '1.25rem 1.25rem 0 0',
+                    padding: '10px',
+                    background: '#000',
+                    boxShadow: 'inset 0 0 30px rgba(0,0,0,0.9), inset 0 0 2px rgba(6,182,212,0.4)',
+                    border: '1px solid rgba(6,182,212,0.15)',
+                    borderBottom: 'none',
+                  }}
+                >
+                  {/* Actual screen */}
+                  <div className="relative rounded-xl overflow-hidden" style={{ background: '#000' }}>
+
+                    {/* CRT scanline overlay */}
+                    <div
+                      className="absolute inset-0 z-10 pointer-events-none"
+                      style={{
+                        backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.25) 3px, rgba(0,0,0,0.25) 4px)',
+                        mixBlendMode: 'multiply',
+                      }}
+                    />
+
+                    {/* Screen glow edge */}
+                    <div className="absolute inset-0 z-10 pointer-events-none rounded-xl" style={{ boxShadow: 'inset 0 0 40px rgba(6,182,212,0.08)' }} />
+
+                    {/* Demo badge on screen */}
+                    <div className="absolute top-4 left-4 z-20 flex items-center gap-2 bg-black/70 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span>
+                      </span>
+                      <span className="text-[10px] font-bold text-cyan-300 tracking-widest uppercase">Product Demo</span>
+                    </div>
+
+                    <video
+                      src="https://raw.githubusercontent.com/omshree59/movie-assets/main/posters/compressed_ent2.mp4"
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      controls
+                      className="w-full block"
+                      style={{ display: 'block', background: '#000', maxHeight: '560px', objectFit: 'cover' }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* TV Stand neck */}
+              <div style={{ width: 80, height: 22, background: 'linear-gradient(180deg, #1a1a2e, #0f0f1a)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)' }} />
+              {/* Stand base */}
+              <div style={{ width: 220, height: 14, background: 'linear-gradient(180deg, #1c1c2e, #0a0a14)', borderRadius: '0 0 2rem 2rem', boxShadow: '0 8px 24px rgba(0,0,0,0.5), 0 0 30px rgba(6,182,212,0.08)' }} />
+            </div>
+
+            {/* Stats row below TV */}
+            <div className="grid grid-cols-3 gap-4 mt-12">
+              {[
+                { val: '< 3s', label: 'Avg. Checkout Time' },
+                { val: '40%', label: 'Overhead Reduction' },
+                { val: '99.99%', label: 'System Uptime' },
+              ].map(({ val, label }) => (
+                <div key={label} className="glass-card rounded-2xl p-5 text-center border border-white/[0.06] hover:-translate-y-1 transition-transform duration-300">
+                  <div className="text-2xl font-black shimmer-text mb-1">{val}</div>
+                  <div className="text-xs text-slate-400 font-medium">{label}</div>
+                </div>
+              ))}
+            </div>
+
+          </div>
+        </section>
+      </Reveal>
+
       {/* COMPARISON TABLE */}
       <ComparisonTable />
 

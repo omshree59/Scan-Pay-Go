@@ -255,69 +255,96 @@ export function LiveChatWidget({ onBookDemo }) {
 
   return (
     <>
-      {/* Bubble */}
+      {/* Floating Sparkle/Bot Button */}
       <div className="fixed bottom-6 right-6 z-[100]">
         <button onClick={() => setOpen(o => !o)}
-          className="relative w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 hover:scale-110"
-          style={{ background: 'linear-gradient(135deg, #06b6d4, #3b82f6)', boxShadow: '0 8px 32px rgba(6,182,212,0.4)' }}>
-          {open ? <X className="w-6 h-6 text-white" /> : <MessageCircle className="w-6 h-6 text-white" />}
-          {!open && (
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-[#030305]" style={{ animation: 'pulse 2s infinite' }} />
+          className="relative group w-14 h-14 rounded-full flex items-center justify-center transition-all duration-500 hover:scale-110"
+          style={{ 
+            background: open ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, #06b6d4, #3b82f6)', 
+            boxShadow: open ? 'none' : '0 10px 40px -10px rgba(6,182,212,0.8)',
+            border: open ? '1px solid rgba(255,255,255,0.1)' : 'none'
+          }}>
+          {open ? (
+            <X className="w-5 h-5 text-slate-300 group-hover:text-white transition-colors" />
+          ) : (
+            <>
+              {/* Outer pulsing ring */}
+              <div className="absolute inset-0 rounded-full border border-cyan-400 opacity-50 animate-ping" style={{ animationDuration: '2s' }} />
+              <Bot className="w-6 h-6 text-white drop-shadow-md" />
+              <div className="absolute top-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-[#030305]" />
+            </>
           )}
         </button>
       </div>
 
-      {/* Panel */}
+      {/* Chat Panel */}
       {open && (
-        <div className="fixed bottom-24 right-6 z-[100] w-80 md:w-96 rounded-[1.5rem] overflow-hidden border border-white/10"
+        <div className="fixed bottom-24 right-6 z-[100] w-[340px] md:w-[380px] rounded-[2rem] overflow-hidden border border-white/[0.08]"
           style={{
-            background: '#090916',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)',
-            animation: 'fadeUp 0.25s ease forwards'
+            background: 'rgba(10, 15, 30, 0.75)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            boxShadow: '0 30px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.05) inset',
+            animation: 'fadeUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards'
           }}>
+          
           {/* Header */}
-          <div className="px-5 py-4 flex items-center gap-3"
-            style={{ background: 'linear-gradient(135deg, rgba(6,182,212,0.15), rgba(59,130,246,0.08))' }}>
-            <div className="relative">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center">
-                <Bot className="w-5 h-5 text-white" />
+          <div className="relative px-6 py-5 flex items-center gap-4 overflow-hidden"
+            style={{ background: 'linear-gradient(180deg, rgba(6,182,212,0.1) 0%, rgba(0,0,0,0) 100%)' }}>
+            {/* Ambient background glow */}
+            <div className="absolute -top-20 -right-20 w-40 h-40 bg-cyan-500 rounded-full blur-[60px] opacity-20 pointer-events-none" />
+            <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-blue-600 rounded-full blur-[60px] opacity-20 pointer-events-none" />
+            
+            <div className="relative z-10">
+              <div className="relative w-12 h-12 rounded-full p-[2px]" style={{ background: 'linear-gradient(135deg, #06b6d4, #3b82f6)' }}>
+                <div className="w-full h-full bg-[#0a0f1e] rounded-full flex items-center justify-center">
+                  <Bot className="w-5 h-5 text-cyan-400" />
+                </div>
               </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-[#090916]" />
+              <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-[2.5px] border-[#0a0f1e]" />
             </div>
-            <div>
-              <div className="font-bold text-white text-sm">Aria</div>
-              <div className="text-xs text-green-400 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block animate-pulse" />
-                Online · Replies instantly
+            
+            <div className="relative z-10">
+              <div className="font-black text-white tracking-wide text-base">Aria AI</div>
+              <div className="text-[11px] font-bold uppercase tracking-widest text-cyan-400/80 flex items-center gap-1.5 mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" /> Solutions Expert
               </div>
             </div>
           </div>
 
-          {/* Messages */}
-          <div className="h-72 overflow-y-auto p-4 space-y-3">
+          {/* Messages Area */}
+          <div className="h-[320px] overflow-y-auto p-5 space-y-4 scrollbar-hide" style={{ scrollBehavior: 'smooth' }}>
             {messages.map((m, i) => (
-              <div key={i} className={`flex gap-2 ${m.from === 'user' ? 'flex-row-reverse' : ''}`}>
-                <div className={`w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-xs ${
-                  m.from === 'bot' ? 'bg-gradient-to-br from-cyan-500 to-blue-600' : 'bg-purple-500/20 border border-purple-500/30'
-                }`}>
-                  {m.from === 'bot' ? <Bot className="w-3.5 h-3.5 text-white" /> : <User className="w-3.5 h-3.5 text-purple-400" />}
-                </div>
-                <div className={`max-w-[78%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+              <div key={i} className={`flex gap-3 ${m.from === 'user' ? 'flex-row-reverse' : ''}`} style={{ animation: 'fadeUp 0.3s ease forwards' }}>
+                {m.from === 'bot' && (
+                  <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs mt-1"
+                    style={{ background: 'linear-gradient(135deg, rgba(6,182,212,0.2), rgba(59,130,246,0.2))', border: '1px solid rgba(6,182,212,0.3)' }}>
+                    <Bot className="w-4 h-4 text-cyan-400" />
+                  </div>
+                )}
+                
+                <div className={`max-w-[80%] px-4 py-3 text-sm leading-relaxed ${
                   m.from === 'bot'
-                    ? 'bg-white/[0.06] border border-white/[0.08] text-slate-200 rounded-tl-sm'
-                    : 'bg-gradient-to-br from-cyan-500 to-blue-600 text-white rounded-tr-sm'
+                    ? 'bg-white/[0.04] border border-white/[0.06] text-slate-200 rounded-2xl rounded-tl-sm shadow-[0_4px_20px_rgba(0,0,0,0.2)]'
+                    : 'bg-gradient-to-br from-cyan-500 to-blue-600 text-white rounded-2xl rounded-tr-sm shadow-[0_4px_20px_rgba(6,182,212,0.3)]'
                 }`}>
                   {m.text}
                 </div>
               </div>
             ))}
+            
+            {/* Animated Typing Indicator */}
             {typing && (
-              <div className="flex gap-2">
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shrink-0">
-                  <Bot className="w-3.5 h-3.5 text-white" />
+              <div className="flex gap-3" style={{ animation: 'fadeUp 0.2s ease forwards' }}>
+                <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs mt-1"
+                  style={{ background: 'linear-gradient(135deg, rgba(6,182,212,0.2), rgba(59,130,246,0.2))', border: '1px solid rgba(6,182,212,0.3)' }}>
+                  <Bot className="w-4 h-4 text-cyan-400" />
                 </div>
-                <div className="flex items-center gap-1 px-4 py-3 bg-white/[0.06] border border-white/[0.08] rounded-2xl rounded-tl-sm">
-                  {[0,1,2].map(i => <span key={i} className="w-1.5 h-1.5 rounded-full bg-slate-400" style={{ animation: `blink 1.2s ease-in-out infinite`, animationDelay: `${i * 0.2}s` }} />)}
+                <div className="flex items-center gap-1.5 px-5 py-4 bg-white/[0.04] border border-white/[0.06] rounded-2xl rounded-tl-sm w-fit">
+                  {[0,1,2].map(i => (
+                    <span key={i} className="w-1.5 h-1.5 rounded-full bg-cyan-500" 
+                      style={{ animation: `bounce 1s infinite`, animationDelay: `${i * 0.15}s` }} />
+                  ))}
                 </div>
               </div>
             )}
@@ -325,31 +352,31 @@ export function LiveChatWidget({ onBookDemo }) {
           </div>
 
           {/* Quick replies */}
-          <div className="px-4 pb-2 flex gap-2 flex-wrap">
+          <div className="px-5 pb-3 flex gap-2 overflow-x-auto scrollbar-hide shrink-0 whitespace-nowrap mask-edges">
             {QUICK.map(q => (
               <button key={q}
                 onClick={() => { if (q === 'Book a demo') { onBookDemo(); } else { setInput(q); setTimeout(send, 0); setMessages(m => [...m, { from: 'user', text: q }]); setTyping(true); setTimeout(() => { setTyping(false); setMessages(m => [...m, { from: 'bot', text: getBotReply(q) }]); }, 900); } }}
-                className="px-3 py-1.5 rounded-full bg-white/[0.05] border border-white/[0.08] text-xs text-slate-300 hover:bg-cyan-500/10 hover:border-cyan-500/30 hover:text-cyan-400 transition-all">
+                className="px-4 py-2 rounded-xl bg-white/[0.03] border border-white/[0.08] text-xs font-medium text-slate-300 hover:bg-cyan-500/10 hover:border-cyan-500/40 hover:text-cyan-300 transition-all shadow-sm">
                 {q}
               </button>
             ))}
           </div>
 
-          {/* Input */}
-          <div className="p-3 border-t border-white/[0.06]">
-            <div className="flex gap-2">
+          {/* Input Area */}
+          <div className="p-4 border-t border-white/[0.08] bg-black/20">
+            <div className="relative flex items-center">
               <input
                 type="text"
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && send()}
-                placeholder="Ask anything..."
-                className="flex-1 bg-white/[0.05] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500/50 transition-colors"
+                placeholder="Message Aria..."
+                className="w-full bg-white/[0.04] border border-white/[0.1] rounded-2xl pl-5 pr-14 py-3.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 focus:bg-white/[0.06] transition-all"
               />
-              <button onClick={send}
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-black transition-all hover:scale-105"
-                style={{ background: 'linear-gradient(135deg, #06b6d4, #3b82f6)' }}>
-                <Send className="w-4 h-4" />
+              <button onClick={send} disabled={!input.trim()}
+                className="absolute right-2 w-10 h-10 rounded-xl flex items-center justify-center text-white transition-all disabled:opacity-30 disabled:scale-100 hover:scale-105"
+                style={{ background: input.trim() ? 'linear-gradient(135deg, #06b6d4, #3b82f6)' : 'rgba(255,255,255,0.1)' }}>
+                <Send className="w-4 h-4 ml-0.5" />
               </button>
             </div>
           </div>

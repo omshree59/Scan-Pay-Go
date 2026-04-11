@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Building2, Server, Smartphone, LineChart, ChevronRight, CheckCircle, Download, ArrowLeft, Zap, MapPin, User, Mail, Phone, Loader2 } from 'lucide-react';
 import { Reveal } from '../components/Shared';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const PRODUCTS = [
   { id: 'kiosk', name: 'ScanPay Kiosk Pro', price: 1299, icon: Server, color: '#06b6d4', desc: 'Freestanding self-checkout terminal' },
@@ -39,6 +41,14 @@ export default function QuotePage({ setCurrentPage }) {
   const [selectedProducts, setSelectedProducts] = useState(['kiosk', 'os']);
   const [form, setForm] = useState({ name: '', company: '', email: '', phone: '' });
   const [generating, setGenerating] = useState(false);
+  const [quoteRef, setQuoteRef] = useState('');
+
+  // Generate a random stable quote reference once we hit the final step
+  useEffect(() => {
+    if (step === 3 && !quoteRef) {
+      setQuoteRef(`QT-${Math.floor(10000 + Math.random() * 90000)}`);
+    }
+  }, [step, quoteRef]);
 
   const toggleProduct = (id) => {
     setSelectedProducts(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
@@ -63,6 +73,102 @@ export default function QuotePage({ setCurrentPage }) {
     if (step === 1) return selectedProducts.length > 0;
     if (step === 2) return form.name && form.company && form.email;
     return true;
+  };
+
+  const handleDownloadPDF = () => {
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(28);
+    doc.setTextColor(6, 182, 212); // ScanPay cyan
+    doc.setFont("helvetica", "bold");
+    doc.text('ScanPay', 14, 22);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(120, 120, 120);
+    doc.setFont("helvetica", "normal");
+    doc.text('ThinkStack OS & Retail Automation', 14, 30);
+    
+    // Quote Ref Panel
+    const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    
+    doc.setFontSize(14);
+    doc.setTextColor(50, 50, 50);
+    doc.setFont("helvetica", "bold");
+    doc.text('OFFICIAL QUOTE', 140, 22);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Reference: ${quoteRef || 'QT-DRAFT'}`, 140, 28);
+    doc.text(`Date: ${dateStr}`, 140, 34);
+    
+    // Billed To Section
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont("helvetica", "bold");
+    doc.text('BILLED TO:', 14, 50);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(form.name, 14, 56);
+    doc.text(`${form.company} (${locations} location${locations !== 1 ? 's' : ''})`, 14, 62);
+    doc.text(form.email, 14, 68);
+    if (form.phone) doc.text(form.phone, 14, 74);
+    
+    // Table 
+    const tableBody = selectedDetails.map(p => {
+      const qty = p.id === 'os' ? 1 : locations;
+      const total = p.price * qty;
+      const desc = p.id === 'os' ? 'Annual enterprise license' : `Cart-equipped / freestanding units`;
+      return [
+        p.name,
+        desc,
+        `$${p.price.toLocaleString()}`,
+        qty.toString(),
+        `$${total.toLocaleString()}`
+      ];
+    });
+
+    // Draw Table
+    autoTable(doc, {
+      startY: 85,
+      head: [['Product / Service', 'Description', 'Unit Price', 'Qty', 'Row Total']],
+      body: tableBody,
+      theme: 'grid',
+      headStyles: { fillColor: [6, 182, 212], textColor: 255, fontStyle: 'bold' },
+      styles: { font: 'helvetica', fontSize: 10, cellPadding: 5 },
+      columnStyles: {
+        2: { halign: 'right' },
+        3: { halign: 'center' },
+        4: { halign: 'right', fontStyle: 'bold' },
+      },
+      alternateRowStyles: { fillColor: [248, 250, 252] }
+    });
+    
+    // Grand Total
+    const finalY = doc.lastAutoTable?.finalY || 85;
+    
+    // Total Box
+    doc.setFillColor(240, 249, 255); // VERY light cyan
+    doc.setDrawColor(6, 182, 212);
+    doc.roundedRect(120, finalY + 10, 75, 20, 2, 2, 'FD');
+    
+    doc.setFontSize(11);
+    doc.setTextColor(100, 100, 100);
+    doc.setFont("helvetica", "bold");
+    doc.text('Estimated Total:', 125, finalY + 23);
+    
+    doc.setFontSize(14);
+    doc.setTextColor(6, 182, 212);
+    doc.text(`$${grandTotal.toLocaleString()}`, 190, finalY + 23, { align: 'right' });
+    
+    // Footer
+    doc.setFontSize(9);
+    doc.setTextColor(150, 150, 150);
+    doc.setFont("helvetica", "normal");
+    doc.text('Thank you for choosing ScanPay.', 14, finalY + 45);
+    doc.text('This quote is valid for 30 days. For questions, contact enterprise@scanpay.io', 14, finalY + 50);
+    
+    // Save
+    doc.save(`ScanPay_Quote_${form.company.replace(/[^a-zA-Z0-9]/g, '_')}_${quoteRef}.pdf`);
   };
 
   return (
@@ -203,7 +309,7 @@ export default function QuotePage({ setCurrentPage }) {
                     <CheckCircle className="w-10 h-10 text-green-400" />
                   </div>
                   <h2 className="hero-title text-2xl font-black text-white mb-1">Your quote is ready, {form.name.split(' ')[0]}!</h2>
-                  <p className="text-slate-400 text-sm">Sent to {form.email} · Reference <span className="text-cyan-400 font-mono">QT-{Math.floor(10000 + Math.random() * 90000)}</span></p>
+                  <p className="text-slate-400 text-sm">Sent to {form.email} · Reference <span className="text-cyan-400 font-mono">{quoteRef}</span></p>
                 </div>
 
                 <div className="bg-[#080c18] border border-white/[0.06] rounded-2xl overflow-hidden mb-6">
@@ -236,7 +342,7 @@ export default function QuotePage({ setCurrentPage }) {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <button onClick={() => window.print()} className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl border border-white/10 text-slate-300 hover:bg-white/5 font-bold text-sm transition-all">
+                  <button onClick={handleDownloadPDF} className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl border border-white/10 text-slate-300 hover:bg-white/5 font-bold text-sm transition-all focus:outline-none focus:ring-2 focus:ring-cyan-500/50">
                     <Download className="w-4 h-4" /> Download PDF
                   </button>
                   <button onClick={() => setCurrentPage('home')}
