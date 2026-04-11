@@ -301,9 +301,9 @@ export default function App() {
               </div>
             </div>
 
-            {/* Developers / Docs */}
+            {/* How It Works */}
             <div className="py-4 cursor-pointer hover:text-white transition-colors drop-shadow-md" onClick={() => setCurrentPage('docs')}>
-              Developers
+              How It Works
             </div>
             
             {/* Account Dropdown */}
@@ -841,7 +841,7 @@ export default function App() {
 
       {currentPage === 'products' && <React.Suspense fallback={<ProductsPageSkeleton />}><PageLoader skeleton={ProductsPageSkeleton}><ProductsPage addToCart={addToCart} addedId={addedId} /></PageLoader></React.Suspense>}
       {currentPage === 'services' && <React.Suspense fallback={<ServicesPageSkeleton />}><PageLoader skeleton={ServicesPageSkeleton}><ServicesPage /></PageLoader></React.Suspense>}
-      {currentPage === 'docs'     && <React.Suspense fallback={<DocsPageSkeleton />}><PageLoader skeleton={DocsPageSkeleton}><DocsPage /></PageLoader></React.Suspense>}
+      {currentPage === 'docs'     && <React.Suspense fallback={<DocsPageSkeleton />}><PageLoader skeleton={DocsPageSkeleton}><DocsPage setCurrentPage={setCurrentPage} /></PageLoader></React.Suspense>}
       {currentPage === 'profile'  && <React.Suspense fallback={<ProfilePageSkeleton />}><PageLoader skeleton={ProfilePageSkeleton}><ProfilePage user={user} onLogin={handleGoogleLogin} onLogout={handleLogout} /></PageLoader></React.Suspense>}
       {currentPage === 'orders'   && <React.Suspense fallback={<OrderHistoryPageSkeleton />}><PageLoader skeleton={OrderHistoryPageSkeleton}><OrderHistoryPage setCurrentPage={setCurrentPage} orders={orders} /></PageLoader></React.Suspense>}
       {currentPage === 'addresses'&& <React.Suspense fallback={<SavedAddressesPageSkeleton />}><PageLoader skeleton={SavedAddressesPageSkeleton}><SavedAddressesPage setCurrentPage={setCurrentPage} savedAddresses={savedAddresses} setSavedAddresses={setSavedAddresses} /></PageLoader></React.Suspense>}
