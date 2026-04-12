@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowRight, Zap, ShieldCheck, BarChart3, TrendingUp, Users, Store, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { ArrowRight, Zap, ShieldCheck, BarChart3, TrendingUp, Users, Store, ChevronRight, ShoppingCart, CheckCircle, CreditCard, Wifi, Battery, Signal, Trash2, RotateCcw } from 'lucide-react';
 import { Reveal } from '../components/Shared';
 
 /* ─────────────────────────────────────────────
@@ -230,6 +230,401 @@ function PayDiagram() {
 }
 
 /* ─────────────────────────────────────────────
+   INTERACTIVE WEB SCANNER PROTOTYPE
+───────────────────────────────────────────── */
+
+const GROCERY_ITEMS = [
+  { id: 'apple',    emoji: '🍎', name: 'Organic Apples',    category: 'Produce',   price: 3.49,  accent: '#22c55e',  barcode: '012345678901' },
+  { id: 'bread',    emoji: '🍞', name: 'Whole Grain Bread', category: 'Bakery',    price: 2.99,  accent: '#f59e0b',  barcode: '023456789012' },
+  { id: 'water',    emoji: '💧', name: 'Sparkling Water',   category: 'Beverages', price: 1.79,  accent: '#06b6d4',  barcode: '034567890123' },
+  { id: 'yogurt',   emoji: '🥛', name: 'Greek Yogurt',      category: 'Dairy',     price: 4.29,  accent: '#a78bfa',  barcode: '045678901234' },
+  { id: 'juice',    emoji: '🍊', name: 'Orange Juice',      category: 'Beverages', price: 3.89,  accent: '#fb923c',  barcode: '056789012345' },
+  { id: 'choc',     emoji: '🍫', name: 'Dark Chocolate',    category: 'Snacks',    price: 2.49,  accent: '#a16207',  barcode: '067890123456' },
+  { id: 'pasta',    emoji: '🍝', name: 'Pasta (500g)',       category: 'Pantry',    price: 1.99,  accent: '#e2b85a',  barcode: '078901234567' },
+  { id: 'oil',      emoji: '🫙', name: 'Extra Virgin Oil',  category: 'Pantry',    price: 8.99,  accent: '#84cc16',  barcode: '089012345678' },
+  { id: 'coffee',   emoji: '☕', name: 'Coffee Beans',      category: 'Beverages', price: 12.99, accent: '#78350f',  barcode: '090123456789' },
+  { id: 'cheese',   emoji: '🧀', name: 'Cheddar Cheese',    category: 'Dairy',     price: 5.49,  accent: '#fbbf24',  barcode: '001234567890' },
+  { id: 'chicken',  emoji: '🍗', name: 'Chicken Breast',    category: 'Meat',      price: 7.99,  accent: '#f87171',  barcode: '012034567890' },
+  { id: 'banana',   emoji: '🍌', name: 'Bananas (bunch)',   category: 'Produce',   price: 1.49,  accent: '#facc15',  barcode: '012345067890' },
+];
+
+// Beep audio synthesis
+function playBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1200, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(900, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.25, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.14);
+  } catch {}
+}
+
+function playSuccessChime() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [523, 659, 784].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.18, ctx.currentTime + i * 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.1 + 0.25);
+      osc.start(ctx.currentTime + i * 0.1);
+      osc.stop(ctx.currentTime + i * 0.1 + 0.28);
+    });
+  } catch {}
+}
+
+function HandheldScreen({ cartItems, scanningItem, phase, total, onPay, onReset }) {
+  const battPct = Math.max(20, 100 - cartItems.length * 6);
+  const listRef = useRef(null);
+
+  useEffect(() => {
+    if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
+  }, [cartItems.length]);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', userSelect: 'none' }}>
+      {/* Handheld outer body */}
+      <div style={{
+        width: 200,
+        background: 'linear-gradient(160deg, #1e293b 0%, #0f172a 100%)',
+        borderRadius: '22px 22px 10px 10px',
+        border: `2px solid ${phase === 'paid' ? 'rgba(34,197,94,0.7)' : phase === 'paying' ? 'rgba(245,158,11,0.6)' : 'rgba(6,182,212,0.35)'}`,
+        boxShadow: phase === 'paid'
+          ? '0 0 40px rgba(34,197,94,0.4), 0 20px 40px rgba(0,0,0,0.6)'
+          : phase === 'paying'
+          ? '0 0 30px rgba(245,158,11,0.35), 0 20px 40px rgba(0,0,0,0.6)'
+          : '0 0 25px rgba(6,182,212,0.2), 0 20px 40px rgba(0,0,0,0.6)',
+        padding: '12px 10px 10px',
+        transition: 'all 0.4s',
+        position: 'relative',
+      }}>
+
+        {/* Status bar */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px', marginBottom: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Signal style={{ width: 10, height: 10, color: '#06b6d4' }} />
+            <Wifi style={{ width: 10, height: 10, color: '#06b6d4' }} />
+          </div>
+          <span style={{ fontSize: 8, color: '#64748b', fontWeight: 700, letterSpacing: '0.1em' }}>SCANPAY OS</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Battery style={{ width: 11, height: 11, color: battPct > 30 ? '#22c55e' : '#f59e0b' }} />
+            <span style={{ fontSize: 7, color: '#475569', fontWeight: 700 }}>{battPct}%</span>
+          </div>
+        </div>
+
+        {/* Screen */}
+        <div style={{
+          width: '100%',
+          height: 320,
+          background: '#040410',
+          borderRadius: 14,
+          border: '1px solid rgba(255,255,255,0.07)',
+          boxShadow: 'inset 0 0 30px rgba(0,0,0,0.8)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+        }}>
+
+          {/* Screen header */}
+          <div style={{ background: 'rgba(6,182,212,0.08)', padding: '8px 10px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <ShoppingCart style={{ width: 10, height: 10, color: '#06b6d4' }} />
+              <span style={{ fontSize: 9, fontWeight: 800, color: '#06b6d4', letterSpacing: '0.08em' }}>MY CART</span>
+            </div>
+            <span style={{ fontSize: 8, color: '#475569' }}>{cartItems.length} items</span>
+          </div>
+
+          {/* PAID phase */}
+          {phase === 'paid' ? (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 16 }}>
+              <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(34,197,94,0.15)', border: '2px solid rgba(34,197,94,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'paidPop 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards' }}>
+                <CheckCircle style={{ width: 26, height: 26, color: '#22c55e' }} />
+              </div>
+              <span style={{ fontSize: 13, color: '#22c55e', fontWeight: 900, letterSpacing: '0.05em' }}>PAYMENT DONE</span>
+              <span style={{ fontSize: 9, color: '#475569', textAlign: 'center' }}>Exit gate is unlocked ↑</span>
+              <div style={{ marginTop: 4, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 8, padding: '6px 14px', textAlign: 'center' }}>
+                <span style={{ fontSize: 11, color: '#4ade80', fontWeight: 800 }}>${total.toFixed(2)}</span>
+                <span style={{ fontSize: 8, color: '#475569', display: 'block', marginTop: 1 }}>charged via NFC</span>
+              </div>
+            </div>
+          ) : phase === 'paying' ? (
+            /* Processing */
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+              <div style={{ width: 36, height: 36, borderRadius: '50%', border: '3px solid rgba(245,158,11,0.2)', borderTop: '3px solid #f59e0b', animation: 'spin 0.8s linear infinite' }} />
+              <span style={{ fontSize: 10, color: '#f59e0b', fontWeight: 700 }}>NFC Processing…</span>
+              <span style={{ fontSize: 8, color: '#475569' }}>${total.toFixed(2)}</span>
+            </div>
+          ) : (
+            /* Cart list */
+            <>
+              <div ref={listRef} style={{ flex: 1, overflowY: 'auto', padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {cartItems.length === 0 && (
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: 0.5, marginTop: 40 }}>
+                    <ShoppingCart style={{ width: 24, height: 24, color: '#334155' }} />
+                    <span style={{ fontSize: 9, color: '#334155', fontWeight: 600 }}>Scan a product</span>
+                  </div>
+                )}
+                {cartItems.map((item, i) => (
+                  <div
+                    key={`${item.id}-${i}`}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      background: 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${item.accent}20`,
+                      borderRadius: 7,
+                      padding: '5px 7px',
+                      animation: 'itemSlideIn 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ fontSize: 13 }}>{item.emoji}</span>
+                      <span style={{ fontSize: 8, color: '#cbd5e1', fontWeight: 600, maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</span>
+                    </div>
+                    <span style={{ fontSize: 9, color: item.accent, fontWeight: 800, flexShrink: 0 }}>${item.price.toFixed(2)}</span>
+                  </div>
+                ))}
+
+                {/* scanning flash row */}
+                {scanningItem && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: `${scanningItem.accent}15`, border: `1px solid ${scanningItem.accent}50`, borderRadius: 7, padding: '5px 7px', animation: 'scanFlash 0.3s ease forwards' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ fontSize: 13 }}>{scanningItem.emoji}</span>
+                      <span style={{ fontSize: 8, color: '#fff', fontWeight: 700 }}>Scanning…</span>
+                    </div>
+                    <div style={{ width: 28, height: 3, borderRadius: 2, background: `${scanningItem.accent}80`, animation: 'scanBar 0.3s ease forwards' }} />
+                  </div>
+                )}
+              </div>
+
+              {/* Total + Pay button */}
+              {cartItems.length > 0 && (
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '8px 10px', flexShrink: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <span style={{ fontSize: 8, color: '#64748b', fontWeight: 700 }}>TOTAL</span>
+                    <span style={{ fontSize: 12, color: '#fff', fontWeight: 900 }}>${total.toFixed(2)}</span>
+                  </div>
+                  <button
+                    onClick={onPay}
+                    style={{
+                      width: '100%', padding: '7px 0', borderRadius: 8, border: 'none', cursor: 'pointer',
+                      background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                      color: '#000', fontSize: 9, fontWeight: 900, letterSpacing: '0.08em',
+                      boxShadow: '0 0 16px rgba(245,158,11,0.4)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                      transition: 'transform 0.15s',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.03)'}
+                    onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                  >
+                    <CreditCard style={{ width: 9, height: 9 }} /> PAY NOW
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Scan slot at bottom */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
+          <div style={{ width: 80, height: 5, borderRadius: 3, background: 'rgba(6,182,212,0.2)', boxShadow: '0 0 10px rgba(6,182,212,0.3)' }} />
+        </div>
+
+        {/* Power LED */}
+        <div style={{ position: 'absolute', top: 10, right: 10, width: 7, height: 7, borderRadius: '50%', background: phase === 'paid' ? '#22c55e' : '#06b6d4', boxShadow: phase === 'paid' ? '0 0 10px #22c55e' : '0 0 10px #06b6d4', transition: 'all 0.4s' }} />
+      </div>
+
+      {/* Handle */}
+      <div style={{ width: 90, height: 40, marginLeft: 28, background: 'linear-gradient(160deg,#1a2540,#0d1525)', borderRadius: '0 0 20px 20px', border: '2px solid rgba(255,255,255,0.06)', borderTop: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }} />
+
+      {/* Reset */}
+      {(cartItems.length > 0 || phase === 'paid') && (
+        <button
+          onClick={onReset}
+          style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '7px 16px', color: '#64748b', fontSize: 11, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+          onMouseLeave={e => { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+        >
+          <RotateCcw style={{ width: 11, height: 11 }} /> Reset Cart
+        </button>
+      )}
+
+      <style>{`
+        @keyframes paidPop { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes itemSlideIn { from { transform: translateY(8px) scale(0.97); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+        @keyframes scanFlash { 0% { opacity: 0.5; transform: scaleX(0.95); } 50% { opacity: 1; transform: scaleX(1); } 100% { opacity: 0.9; } }
+        @keyframes scanBar { from { width: 10px; } to { width: 28px; } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
+    </div>
+  );
+}
+
+function InteractiveScannerDemo() {
+  const [cartItems, setCartItems] = useState([]);
+  const [scanningItem, setScanningItem] = useState(null);
+  const [scanFlashId, setScanFlashId] = useState(null);
+  const [phase, setPhase] = useState('idle'); // idle | paying | paid
+  const [hovered, setHovered] = useState(null);
+
+  const total = cartItems.reduce((s, i) => s + i.price, 0);
+
+  const handleScan = useCallback((item) => {
+    if (phase !== 'idle' || scanningItem) return;
+    playBeep();
+    setScanningItem(item);
+    setScanFlashId(item.id);
+    setTimeout(() => {
+      setScanningItem(null);
+      setScanFlashId(null);
+      setCartItems(prev => [...prev, item]);
+    }, 420);
+  }, [phase, scanningItem]);
+
+  const handlePay = useCallback(() => {
+    if (cartItems.length === 0 || phase !== 'idle') return;
+    setPhase('paying');
+    setTimeout(() => {
+      setPhase('paid');
+      playSuccessChime();
+    }, 1600);
+  }, [cartItems.length, phase]);
+
+  const handleReset = useCallback(() => {
+    setCartItems([]);
+    setScanningItem(null);
+    setScanFlashId(null);
+    setPhase('idle');
+  }, []);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+
+      {/* Instruction pill */}
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.25)', borderRadius: 99, padding: '7px 18px' }}>
+          <span style={{ fontSize: 10, fontWeight: 800, color: '#a78bfa', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+            {phase === 'paid' ? '✓ Payment Complete — Reset to Try Again' : phase === 'paying' ? '⚡ Processing NFC Payment…' : cartItems.length === 0 ? '👆 Click any product to scan it into your cart' : `${cartItems.length} item${cartItems.length > 1 ? 's' : ''} in cart — keep scanning or tap Pay Now`}
+          </span>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 24, alignItems: 'start' }}>
+
+        {/* LEFT — Grocery shelf grid */}
+        <div>
+          <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#475569', marginBottom: 14 }}>🛒 Store Aisle — Click to Scan</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 10 }}>
+            {GROCERY_ITEMS.map(item => {
+              const isFlashing = scanFlashId === item.id;
+              const isHovered = hovered === item.id;
+              const inCart = cartItems.filter(c => c.id === item.id).length;
+
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleScan(item)}
+                  onMouseEnter={() => setHovered(item.id)}
+                  onMouseLeave={() => setHovered(null)}
+                  disabled={phase !== 'idle'}
+                  style={{
+                    background: isFlashing
+                      ? `${item.accent}22`
+                      : isHovered
+                      ? 'rgba(255,255,255,0.07)'
+                      : 'rgba(255,255,255,0.03)',
+                    border: isFlashing
+                      ? `1.5px solid ${item.accent}80`
+                      : isHovered
+                      ? `1.5px solid ${item.accent}50`
+                      : '1.5px solid rgba(255,255,255,0.07)',
+                    borderRadius: 14,
+                    padding: '14px 10px',
+                    cursor: phase !== 'idle' ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 6,
+                    transition: 'all 0.18s cubic-bezier(0.34,1.56,0.64,1)',
+                    transform: isFlashing ? 'scale(0.94)' : isHovered ? 'scale(1.04) translateY(-2px)' : 'scale(1)',
+                    boxShadow: isFlashing
+                      ? `0 0 20px ${item.accent}50`
+                      : isHovered
+                      ? `0 8px 24px rgba(0,0,0,0.4), 0 0 16px ${item.accent}20`
+                      : '0 4px 12px rgba(0,0,0,0.3)',
+                    opacity: phase !== 'idle' ? 0.5 : 1,
+                    position: 'relative',
+                  }}
+                >
+                  {/* In cart badge */}
+                  {inCart > 0 && (
+                    <div style={{ position: 'absolute', top: 6, right: 6, width: 16, height: 16, borderRadius: '50%', background: item.accent, color: '#000', fontSize: 8, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {inCart}
+                    </div>
+                  )}
+
+                  {/* Scan laser line animation */}
+                  {isFlashing && (
+                    <div style={{ position: 'absolute', inset: 0, borderRadius: 14, overflow: 'hidden', pointerEvents: 'none' }}>
+                      <div style={{ position: 'absolute', left: 0, right: 0, height: 2, top: '40%', background: `linear-gradient(90deg, transparent, ${item.accent}, transparent)`, boxShadow: `0 0 8px ${item.accent}`, animation: 'laserSweep 0.4s ease forwards' }} />
+                    </div>
+                  )}
+
+                  <span style={{ fontSize: 32, lineHeight: 1, filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.4))' }}>{item.emoji}</span>
+                  <span style={{ fontSize: 10, color: '#e2e8f0', fontWeight: 700, textAlign: 'center', lineHeight: 1.3 }}>{item.name}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <span style={{ fontSize: 9, color: '#475569', fontWeight: 600 }}>{item.category}</span>
+                    <span style={{ fontSize: 11, color: item.accent, fontWeight: 800 }}>${item.price.toFixed(2)}</span>
+                  </div>
+
+                  {/* barcode strip */}
+                  <div style={{ display: 'flex', gap: 1.5, alignItems: 'flex-end', marginTop: 2 }}>
+                    {[4,6,3,7,5,2,8,4,6,5].map((h, i) => (
+                      <div key={i} style={{ width: 2, height: h * 2.2, background: isHovered || isFlashing ? `${item.accent}80` : 'rgba(255,255,255,0.12)', borderRadius: 1, transition: 'background 0.2s' }} />
+                    ))}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* RIGHT — Handheld device */}
+        <div style={{ position: 'sticky', top: 120 }}>
+          <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#475569', marginBottom: 14, textAlign: 'center' }}>📱 Live Handheld Screen</p>
+          <HandheldScreen
+            cartItems={cartItems}
+            scanningItem={scanningItem}
+            phase={phase}
+            total={total}
+            onPay={handlePay}
+            onReset={handleReset}
+          />
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes laserSweep {
+          0% { top: 10%; opacity: 0; }
+          30% { opacity: 1; }
+          60% { top: 75%; opacity: 1; }
+          100% { top: 85%; opacity: 0; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
    PAGE DATA
 ───────────────────────────────────────────── */
 const OUTCOMES = [
@@ -403,6 +798,42 @@ export default function HowItWorksPage({ setCurrentPage }) {
                   )}
                 </React.Fragment>
               ))}
+            </div>
+          </div>
+        </Reveal>
+
+        {/* ══════════════════════════════════════════
+             INTERACTIVE WEB SCANNER PROTOTYPE
+           ══════════════════════════════════════════ */}
+        <Reveal delay={220}>
+          <div className="mb-16">
+            {/* Section header */}
+            <div className="text-center mb-10">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-purple-500/25 bg-purple-500/8 text-purple-400 text-xs font-bold tracking-[0.15em] uppercase mb-6">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-400"></span>
+                </span>
+                Live Prototype
+              </div>
+              <h2 className="hero-title text-3xl md:text-5xl font-black text-white tracking-tight mb-4">
+                Try The <span className="shimmer-text">Scanner</span> Yourself
+              </h2>
+              <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+                Click any grocery item to simulate scanning it with the ScanPay Handheld. Watch the device screen update in real-time — then hit Pay Now to feel the full checkout flow.
+              </p>
+            </div>
+
+            {/* Scanner container */}
+            <div
+              className="rounded-3xl p-8 md:p-10"
+              style={{
+                background: 'linear-gradient(135deg, rgba(139,92,246,0.04) 0%, rgba(6,182,212,0.04) 100%)',
+                border: '1px solid rgba(139,92,246,0.15)',
+                boxShadow: '0 0 80px rgba(139,92,246,0.06), 0 40px 80px rgba(0,0,0,0.5)',
+              }}
+            >
+              <InteractiveScannerDemo />
             </div>
           </div>
         </Reveal>
