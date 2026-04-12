@@ -55,6 +55,11 @@ const faqs = [
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('home');
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [currentPage]);
+
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [addedId, setAddedId] = useState(null);
